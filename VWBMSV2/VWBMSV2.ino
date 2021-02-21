@@ -48,7 +48,6 @@ FilterOnePole lowpassFilter( LOWPASS, filterFrequency );
 //Simple BMS V2 wiring//
 const int ACUR2 = A0; // current 1
 const int ACUR1 = A1; // current 2
-const int PP_IN = A14; //requires a 1K2 pull up resistor to 3V3
 const int IN1 = 17; // input 1 - high active
 const int IN2 = 16; // input 2- high active
 const int IN3 = 18; // input 1 - high active
@@ -89,6 +88,7 @@ byte bmsstatus = 0;
 #define Elcon 4
 #define Victron 5
 #define Coda 6
+#define Outlander 8
 //
 
 int Discharge;
@@ -267,7 +267,6 @@ void setup()
   pinMode(IN2, INPUT);
   pinMode(IN3, INPUT);
   pinMode(IN4, INPUT);
-  pinMode(PP_IN, INPUT);
   pinMode(OUT1, OUTPUT); // drive contactor
   digitalWrite(OUT1, LOW);
   pinMode(OUT2, OUTPUT); // precharge
@@ -537,6 +536,9 @@ void vehicleMode() {
       }
       if (digitalRead(IN3) == LOW)//detect AC not present for charging
       {
+        //send a 0 amp request to outlander
+        chargecurrent = 0;
+        chargerCommsTask();
         bmsstatus = Ready;
       }
 
@@ -2160,7 +2162,7 @@ void menu()
 
       case '5': //1 Over Voltage Setpoint
         settings.chargertype = settings.chargertype + 1;
-        if (settings.chargertype > 7)
+        if (settings.chargertype > 8)
         {
           settings.chargertype = 0;
         }
@@ -2582,6 +2584,9 @@ void menu()
             break;
           case 7:
             SERIALCONSOLE.print("Eltek PC Charger");
+            break;
+          case 8:
+            SERIALCONSOLE.print("Outlander");
             break;
         }
         SERIALCONSOLE.println();
@@ -3597,6 +3602,21 @@ void chargercomms()
       msg.buf[6] = 0x96;
     }
     msg.buf[7] = 0x01; //HV charging
+    Can0.write(msg);
+  }
+
+  if (settings.chargertype == Outlander)
+  {
+  
+    msg.id  = 0x286;
+    msg.len = 8;
+    msg.buf[0] = highByte(uint16_t(settings.ChargeVsetpoint * settings.Scells * 10));//volage
+    msg.buf[1] = lowByte(uint16_t(settings.ChargeVsetpoint * settings.Scells * 10));
+    msg.buf[2] = lowByte(chargecurrent / ncharger);
+    msg.buf[3] = 0x0;
+    msg.buf[4] = 0x0;
+    msg.buf[5] = 0x0;
+    msg.buf[6] = 0x0;
     Can0.write(msg);
   }
 }
