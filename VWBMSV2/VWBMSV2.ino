@@ -79,6 +79,7 @@ byte bmsstatus = 0;
 #define Analoguedual 1
 #define Canbus 2
 #define Analoguesing 3
+
 //
 //Charger Types
 #define NoCharger 0
@@ -3607,7 +3608,17 @@ void chargercomms()
 
   if (settings.chargertype == Outlander)
   {
-  
+    msg.id = 0x285;
+    msg.len = 8;
+    msg.buf[0] = 0x0;
+    msg.buf[1] = 0x0;
+    msg.buf[2] = 0xb6;
+    msg.buf[3] = 0x0;
+    msg.buf[4] = 0x0;
+    msg.buf[5] = 0x0;
+    msg.buf[6] = 0x0;
+    Can0.write(msg);
+    
     msg.id  = 0x286;
     msg.len = 8;
     msg.buf[0] = highByte(uint16_t(settings.ChargeVsetpoint * settings.Scells * 10));//volage
