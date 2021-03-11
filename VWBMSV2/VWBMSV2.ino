@@ -887,7 +887,7 @@ void loop()
         SERIALCONSOLE.println("  ");
       */
       ErrorReason = ErrorReason & ~0x08;
-      if(ErrorReason == 0)
+      if(bmsstatus == Error && ErrorReason == 0)
       {
         bmsstatus = Boot;
       }
