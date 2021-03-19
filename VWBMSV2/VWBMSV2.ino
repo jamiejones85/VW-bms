@@ -259,6 +259,7 @@ void loadSettings()
 
 CAN_message_t msg;
 CAN_message_t inMsg;
+CAN_message_t inMsg1;
 CAN_filter_t filter;
 
 uint32_t lastUpdate;
@@ -297,6 +298,10 @@ void setup()
   analogWriteFrequency(OUT8, pwmfreq);
 
   Can0.begin(500000);
+  
+  #if defined(__MK66FX1M0__) //teensy 3.6 only
+    Can1.begin(500000);
+  #endif
 
   //set filters for standard
   for (int i = 0; i < 8; i++)
@@ -304,6 +309,9 @@ void setup()
     //Can0.getFilter(filter, i);
     filter.flags.extended = 0;
     Can0.setFilter(filter, i);
+    #if defined(__MK66FX1M0__) //teensy 3.6 only
+      Can1.setFilter(filter, i);
+    #endif
   }
   //set filters for extended
   for (int i = 9; i < 13; i++)
@@ -311,6 +319,9 @@ void setup()
     //Can0.getFilter(filter, i);
     filter.flags.extended = 1;
     Can0.setFilter(filter, i);
+    #if defined(__MK66FX1M0__) //teensy 3.6 only
+      Can1.setFilter(filter, i);
+    #endif
   }
 
   //if using enable pins on a transceiver they need to be set on
@@ -410,7 +421,13 @@ void loop()
   {
     canread();
   }
-
+#if defined(__MK66FX1M0__) //teensy 3.6 only  
+  while (Can1.available())
+  {
+    canread();
+  }
+#endif
+  
   if (SERIALCONSOLE.available() > 0)
   {
     menu();
@@ -2990,17 +3007,24 @@ void canread()
 
     Serial.println();
   }
+// this where we put our specific (spaceballs) teensy 3.6 code
+#if defined(__MK66FX1M0__)
 
-  Can1.read(inMsg);
+  Can1.read(inMsg1);
   // Read data: len = data length, buf = data byte(s)
-  
-  if (inMsg.id >= 0x1B0 && inMsg.id <= 0x1CF)// This will identifies mesgages from VW modules id's 0x1B0 to 0x1CF
+  // Note: the Second canbus does not obay can debug mode in software, if you need to debug change (inMsg1,0) to (inMsg1,1).
+  if (inMsg1.id >= 0x1B0 && inMsg1.id <= 0x1CF)// This will identifies mesgages from VW modules id's 0x1B0 to 0x1CF (standard pack), this is set so that a single pack on the second canbus will translate the modules id's to 9 to 16.
   {
-      inMsg.id = inMsg.id + 020; // This offsets the 'inMsg.id by 32... for example from 0x1B0 (432) to 0x1D0 (464)
-      bms.decodecan(inMsg, 0); //do VW BMS if ids are ones identified to be modules
-    
+      inMsg1.id = inMsg1.id + 0x20;// This offsets the 'inMsg.id by 32... for example from 0x1B0 (432) to 0x1D0 (464),
+      bms.decodecan(inMsg1, 0); //do VW BMS if ids are ones identified to be modules
   }
 
+  if ((inMsg1.id >= 0x1A555401) && (inMsg1.id <= 0x1A555408))   // This only allows the Temperature CAN-ID's to be offset by 8, [just incase we want to do something else on this bus later].
+  {
+      inMsg1.id = inMsg1.id + 0x8; // this add 8 to the msgid of the temperture can id
+      bms.decodetemp(inMsg1, 0);
+  }  
+#endif 
 }
 
 void VWShunt(CAN_message_t inMsg) {

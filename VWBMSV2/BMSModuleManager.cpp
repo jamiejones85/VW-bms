@@ -81,11 +81,12 @@ void BMSModuleManager::decodetemp(CAN_message_t &msg, int debug)
     Serial.print(CMU);
     Serial.print(" | ");
   }
-  if (CMU > 10 && CMU < 60)
+  // The code below i belive should be deleted as it prevents tempertures from being read rom the second canbus (temp can id's offset by 8), so they would go from 9 to 16 and you wouldnt see modules 11+  
+  /*if (CMU > 10 && CMU < 60)
   {
     CMU = (CMU * 0.5) - 15;
   }
-  /*
+  
     if (CMU > 64 && CMU < 73)
     {
     CMU = CMU - 48;
@@ -152,7 +153,7 @@ void BMSModuleManager::decodecan(CAN_message_t &msg, int debug)
       CMU = 28;
       Id = 0;
       break;
-      case (0x21D):
+      case (0x21D):decodetemp
       CMU = 28;
       Id = 1;
       break;
@@ -197,7 +198,7 @@ void BMSModuleManager::decodecan(CAN_message_t &msg, int debug)
       break;
       case (0x22A):
       CMU = 31;
-      Id = 2;
+      Id = 2;decodetemp
       break;
 
       case (0x22C):
