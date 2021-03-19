@@ -2990,6 +2990,17 @@ void canread()
 
     Serial.println();
   }
+
+  Can1.read(inMsg);
+  // Read data: len = data length, buf = data byte(s)
+  
+  if (inMsg.id >= 0x1B0 && inMsg.id <= 0x1CF)// This will identifies mesgages from VW modules id's 0x1B0 to 0x1CF
+  {
+      inMsg.id = inMsg.id + 020; // This offsets the 'inMsg.id by 32... for example from 0x1B0 (432) to 0x1D0 (464)
+      bms.decodecan(inMsg, 0); //do VW BMS if ids are ones identified to be modules
+    
+  }
+
 }
 
 void VWShunt(CAN_message_t inMsg) {
