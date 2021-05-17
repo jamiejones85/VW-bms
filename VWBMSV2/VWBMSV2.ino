@@ -18,36 +18,9 @@
   TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
   SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
-// This is for teensey 3.6 where 3rd/4th (Can2/Can3) Can buses are SPI based MCP2515 can, this needs to be definded before Flexcan or it will fail to compile.
-#if defined(__MK66FX1M0__) //teensy 3.6 only
-  // https://github.com/pierremolinaro/acan2515
-  
-  #include <ACAN2515.h>
-  
-  static const byte MCP2515_Can_SCK = 27 ; // (SPI0) SCK input of MCP2515
-  static const byte MCP2515_Can_SI  = 28 ; // (SPI0) SI input of MCP2515
-  static const byte MCP2515_Can_SO  = 39 ; // (SPI0) SO output of MCP2515
-  static const byte MCP2515_Can_CS  = 26 ; // (SPI0) CS input of MCP2515
-  static const byte MCP2515_Can_INT = 29 ; // (SPI0) INT output of MCP2515
-  
-//  static const byte MCP2515_Can3_SCK = 32 ; // (SPI1) SCK input of MCP2515
-//  static const byte MCP2515_Can3_SI  = 0 ; // (SPI1) SI input of MCP2515
-//  static const byte MCP2515_Can3_SO  = 1 ; // (SPI1) SO output of MCP2515
-//  static const byte MCP2515_Can3_CS  = 31 ; // (SPI1) CS input of MCP2515
-//  static const byte MCP2515_Can3_INT = 30 ; // (SPI1) INT output of MCP2515
 
-  const uint32_t QUARTZ_FREQUENCY = 16 * 1000 * 1000 ; // 16 MHz
-  
-  ACAN2515 can (MCP2515_Can_CS, SPI, MCP2515_Can_INT) ;
-//  ACAN2515 can3 (MCP2515_Can3_CS, SPI1, MCP2515_Can3_INT) ;
-  // Here the bitrate for the 3rd/4th Can Buses are Hard Coded for 500kb/s, obiously change if you need to..
-  //ACAN2515Settings settings2 (QUARTZ_FREQUENCY, 500 * 1000) ; // CAN bit rate 500 kb/s
-  //ACAN2515Settings settings3 (QUARTZ_FREQUENCY, 500 * 1000) ; // CAN bit rate 500 kb/s
-  static const uint32_t CAN_BIT_RATE = 500 * 1000 ;
-//  static const uint32_t CAN3_BIT_RATE = 500 * 1000 
-  // here we say that a message has not been sent,see ACAN Trytosend for further information...
-  //const bool ok = can.tryToSend (message) ;
-  
+#if defined(__MK66FX1M0__) //teensy 3.6 only
+   
 #endif
 
 #include "BMSModuleManager.h"
@@ -57,7 +30,9 @@
 #include "Logger.h"
 #include <ADC.h> //https://github.com/pedvide/ADC
 #include <EEPROM.h>
-#include <FlexCAN.h> //https://github.com/collin80/FlexCAN_Library
+//#include <FlexCAN.h> //https://github.com/collin80/FlexCAN_Library
+#include <ACAN.h> //https://github.com/pierremolinaro/acan
+#include <ACAN2515.h> // https://github.com/pierremolinaro/ACAN2515
 #include <SPI.h>
 #include <Filters.h>//https://github.com/JonHub/Filters
 #include "BMSUtil.h"
@@ -95,7 +70,52 @@ const int OUT7 = 5;// output 1 - high active
 const int OUT8 = 6;// output 1 - high active
 const int led = 13;
 const int BMBfault = 11;
+////////////////////////////////////////////////////
 
+// Can Port Selection
+  static const byte CAN_OUT = 0 ;// CAN port ID to output data over can (Victron) (set to -1 for none)
+  static const byte CAN_CUR = 0 ;// CAN port ID for CAN based Current Sensors/Shunts (set to -1 for none)
+  static const byte CAN_CH1 = 0 ;// Charger 1
+  static const byte CAN_CH2 = -1 ;// Charger 2, -1 = Not used
+  static const byte CAN_PK1 = 0 ;// Battery Pack 1 
+  static const byte CAN_PK2 = -1 ;// Battery Pack 2, -1 = Not used
+  static const byte CAN_PK3 = -1 ;// Battery Pack 3, -1 = Not used
+  static const byte CAN_PK4 = -1 ;// Battery Pack 4, -1 = Not used
+
+// PINS used for SPI MCP2515 Canbus
+
+  static const byte MCP2515_can2_SCK = 27 ; // (SPI0) SCK input of MCP2515
+  static const byte MCP2515_can2_SI  = 28 ; // (SPI0) SI input of MCP2515
+  static const byte MCP2515_can2_SO  = 39 ; // (SPI0) SO output of MCP2515
+  static const byte MCP2515_can2_CS  = 26 ; // (SPI0) CS input of MCP2515
+  static const byte MCP2515_can2_INT = 29 ; // (SPI0) INT output of MCP2515
+  
+  static const byte MCP2515_can3_SCK = 32 ; // (SPI1) SCK input of MCP2515
+  static const byte MCP2515_can3_SI  = 0 ; // (SPI1) SI input of MCP2515
+  static const byte MCP2515_can3_SO  = 1 ; // (SPI1) SO output of MCP2515
+  static const byte MCP2515_can3_CS  = 31 ; // (SPI1) CS input of MCP2515
+  static const byte MCP2515_can3_INT = 30 ; // (SPI1) INT output of MCP2515
+
+  static const byte MCP2515_can4_SCK = 46 ; // (SPI1) SCK input of MCP2515
+  static const byte MCP2515_can4_SI  = 44 ; // (SPI1) SI input of MCP2515
+  static const byte MCP2515_can4_SO  = 45 ; // (SPI1) SO output of MCP2515
+  static const byte MCP2515_can4_CS  = 43 ; // (SPI1) CS input of MCP2515
+  static const byte MCP2515_can4_INT = 42 ; // (SPI1) INT output of MCP2515
+  
+  const uint32_t QUARTZ_FREQUENCY = 16 * 1000 * 1000 ; // 16 MHz
+  
+  ACAN2515 can2 (MCP2515_can2_CS, SPI, MCP2515_can2_INT) ;
+  ACAN2515 can3 (MCP2515_can3_CS, SPI1, MCP2515_can3_INT) ;
+  ACAN2515 can4 (MCP2515_can4_CS, SPI2, MCP2515_can4_INT) ;
+
+  // the bitrates for Cans Buses are hardcaded here 
+  static const uint32_t can0_BIT_RATE = 500 * 1000 ;
+  static const uint32_t can1_BIT_RATE = 500 * 1000 ;
+  static const uint32_t can2_BIT_RATE = 500 * 1000 ;
+  static const uint32_t can3_BIT_RATE = 500 * 1000 ;
+  static const uint32_t can4_BIT_RATE = 500 * 1000 ;
+  
+//////////////////////////////////////////////////////////////////////////////////////////
 
 byte bmsstatus = 0;
 //bms status values
@@ -156,6 +176,9 @@ int outlandertemp;
 
 unsigned char alarm[4], warning[4] = {0, 0, 0, 0};
 unsigned char mes[8] = {0, 0, 0, 0, 0, 0, 0, 0};
+
+// You could obiously change to whatever you like as its only 8 charcters
+// This is broadcast over can (victron) for some reason, unsure if it is needed.
 unsigned char bmsname[8] = {'S', 'I', 'M', 'P', ' ', 'B', 'M', 'S'};
 unsigned char bmsmanu[8] = {'S', 'I', 'M', 'P', ' ', 'E', 'C', 'O'};
 long unsigned int rxId;
@@ -164,9 +187,6 @@ byte rxBuf[8];
 char msgString[128];                        // Array to store serial string
 uint32_t inbox;
 signed long CANmilliamps;
-
-//struct can_frame canMsg;
-//MCP2515 CAN1(10); //set CS pin for can controlelr
 
 
 //variables for current calulation
@@ -210,11 +230,6 @@ int Charged = 0;
 //VW BMS CAN variables////////////
 int controlid = 0x0BA;
 int moduleidstart = 0x1CC;
-
-//Serial Expansion Variables///
-int SerialID = 0; //ID assigned over serialbus
-int SerialSlaves = 0; //number of slaves present
-
 
 //Debugging modes//////////////////
 int debug = 1;
@@ -290,13 +305,13 @@ void loadSettings()
   settings.triptime = 500;//mS of delay before counting over or undervoltage
 }
 
-CAN_message_t msg;
-CAN_message_t inMsg;
-CAN_message_t inMsg1;
-CAN_filter_t filter;
+//CANMessage msg; // Old Flexcan
+//CANMessage message;  // Old Flexcan
+//CANMessage message1;  // Old Flexcan
+//CAN_filter_t filter;
+CANMessage message ; // this define that message is in format used with ACAN's CANMessage format
 
 uint32_t lastUpdate;
-
 
 void setup()
 {
@@ -330,58 +345,109 @@ void setup()
   analogWriteFrequency(OUT7, pwmfreq);
   analogWriteFrequency(OUT8, pwmfreq);
 
+
+/////////////////////////////////////////////////////////////////////////
+//        setup & start Can buses
+
+   ACANSettings settings_0 (can1_BIT_RATE) ;
+   const uint32_t errorCode_0 = ACAN::can0.begin (settings_0) ;   
+    if (errorCode_0 == 0) {
+      Serial.println ("can0 configuration: ok") ;
+    }else{
+      Serial.print ("can0 configuration error 0x") ;
+      Serial.println (errorCode_0, HEX) ;
+      }
+      
   #if defined(__MK66FX1M0__) //teensy 3.6 only
-    SPI.setMOSI (MCP2515_Can_SI) ;
-    SPI.setMISO (MCP2515_Can_SO) ;
-    SPI.setSCK (MCP2515_Can_SCK) ;
+  
+    SPI.setMOSI (MCP2515_can2_SI) ;
+    SPI.setMISO (MCP2515_can2_SO) ;
+    SPI.setSCK (MCP2515_can2_SCK) ;
+    SPI.begin () ;
+
+    SPI.setMOSI (MCP2515_can3_SI) ;
+    SPI.setMISO (MCP2515_can3_SO) ;
+    SPI.setSCK (MCP2515_can3_SCK) ;
+    SPI.begin () ;
+
+    SPI.setMOSI (MCP2515_can4_SI) ;
+    SPI.setMISO (MCP2515_can4_SO) ;
+    SPI.setSCK (MCP2515_can4_SCK) ;
     SPI.begin () ;
 
     //--- Configure ACAN2515
-    ACAN2515Settings settings2515 (QUARTZ_FREQUENCY, CAN_BIT_RATE) ;
-    const uint32_t errorCode2515 = can.begin (settings2515, [] { can.isr () ; }) ;
-    if (errorCode2515 == 0) {
-      Serial.println ("ACAN2515 configuration: ok") ;
+    ACAN2515Settings settings2515_2 (QUARTZ_FREQUENCY, can2_BIT_RATE) ;
+    const uint32_t errorCode2515_2 = can2.begin (settings2515_2, [] { can2.isr () ; }) ;
+    if (errorCode2515_2 == 0) {
+      Serial.println ("can2 ACAN2515 configuration: ok") ;
     }else{
-      Serial.print ("ACAN2515 configuration error 0x") ;
-      Serial.println (errorCode2515, HEX) ;
+      Serial.print ("can2 ACAN2515 configuration error 0x") ;
+      Serial.println (errorCode2515_2, HEX) ;
       }
-/*    
-    SPI1.setMOSI (MCP2515_Can3_SI) ;
-    SPI1.setMISO (MCP2515_Can3_SO) ;
-    SPI1.setSCK (MCP2515_Can3_SCK) ;
-    SPI1.begin () ;
-*/
-  #endif
 
-  Can0.begin(500000);
+    ACAN2515Settings settings2515_3 (QUARTZ_FREQUENCY, can3_BIT_RATE) ;
+    const uint32_t errorCode2515_3 = can3.begin (settings2515_3, [] { can3.isr () ; }) ;
+    if (errorCode2515_3 == 0) {
+      Serial.println ("can3 ACAN2515 configuration: ok") ;
+    }else{
+      Serial.print ("can3 ACAN2515 configuration error 0x") ;
+      Serial.println (errorCode2515_3, HEX) ;
+      }
+
+    ACAN2515Settings settings2515_4 (QUARTZ_FREQUENCY, can4_BIT_RATE) ;
+    const uint32_t errorCode2515_4 = can4.begin (settings2515_4, [] { can4.isr () ; }) ;
+    if (errorCode2515_4 == 0) {
+      Serial.println ("can4 ACAN2515 configuration: ok") ;
+    }else{
+      Serial.print ("can4 ACAN2515 configuration error 0x") ;
+      Serial.println (errorCode2515_4, HEX) ;
+      }
+      
+    // 2nd Can on teensey 3.6
+    ACANSettings settings_1 (can1_BIT_RATE) ;
+   const uint32_t errorCode_1 = ACAN::can1.begin (settings_1) ;   
+    if (errorCode_1 == 0) {
+      Serial.println ("can1 configuration: ok") ;
+    }else{
+      Serial.print ("can1 configuration error 0x") ;
+      Serial.println (errorCode_1, HEX) ;
+      }
+  #endif
   
-  #if defined(__MK66FX1M0__) //teensy 3.6 only
-    Can1.begin(500000);// 500 kbps, 2nd battery pack    
-  #endif
-
+ 
+///////////////////////////////////////////////////////////////////////
+/*
   //set filters for standard
   for (int i = 0; i < 8; i++)
   {
-    //Can0.getFilter(filter, i);
     filter.flags.extended = 0;
-    Can0.setFilter(filter, i);
+    can0.setFilter(filter, i);
+
     #if defined(__MK66FX1M0__) //teensy 3.6 only
-      Can1.setFilter(filter, i);
+      can1.setFilter(filter, i);
+      can2.setFilter(filter, i);
+      can3.setFilter(filter, i);
+      can4.setFilter(filter, i);
     #endif
   }
+  
   //set filters for extended
   for (int i = 9; i < 13; i++)
   {
-    //Can0.getFilter(filter, i);
     filter.flags.extended = 1;
-    Can0.setFilter(filter, i);
+    can0.setFilter(filter, i);
+    
     #if defined(__MK66FX1M0__) //teensy 3.6 only
-      Can1.setFilter(filter, i);
+      can1.setFilter(filter, i);
+      can2.setFilter(filter, i);
+      can3.setFilter(filter, i);
+      can4.setFilter(filter, i);
     #endif
   }
 
-  //if using enable pins on a transceiver they need to be set on
-
+  //NOTE ..... if using enable pins on a transceiver they need to be set on
+*/
+//// ADC Settings 
 
   adc->adc0->setAveraging(16); // set number of averages
   adc->adc0->setResolution(16); // set bits of resolution
@@ -389,6 +455,7 @@ void setup()
   adc->adc0->setSamplingSpeed(ADC_SAMPLING_SPEED::MED_SPEED);
   adc->adc0->startContinuous(ACUR1);
 
+// Start serial Coms
 
   SERIALCONSOLE.begin(115200);
   SERIALCONSOLE.println("Starting up!");
@@ -429,15 +496,8 @@ void setup()
   WDOG_STCTRLH |= WDOG_STCTRLH_ALLOWUPDATE |
                   WDOG_STCTRLH_WDOGEN | WDOG_STCTRLH_WAITEN |
                   WDOG_STCTRLH_STOPEN | WDOG_STCTRLH_CLKSRC;
-  interrupts();
-  /////////////////
-  SERIALBMS.begin(115200);
-  //SERIALBMS.begin(612500); //Tesla serial bus
-  //VE.begin(19200); //Victron VE direct bus
-#if defined (__arm__) && defined (__SAM3X8E__)
-  serialSpecialInit(USART0, 612500); //required for Due based boards as the stock core files don't support 612500 baud.
-#endif
 
+  interrupts();
   SERIALCONSOLE.println("Started serial interface to BMS.");
 
   EEPROM.get(0, settings);
@@ -471,19 +531,26 @@ void setup()
   cleartime = millis();
 }
 
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//  Main Program Loop 
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 void loop()
+
 {
-  while (Can0.available())
+/*
+  while (can0.available())
   {
     canread();
   }
 #if defined(__MK66FX1M0__) //teensy 3.6 only  
-  while (Can1.available())
+  while (can1.available())
   {
     canread();
   }
-#endif
   
+#endif
+*/  
   if (SERIALCONSOLE.available() > 0)
   {
     menu();
@@ -1682,196 +1749,158 @@ void calcur()
 }
 
 void VEcan() //communication with Victron system over CAN
-{
+{ 
 
- #if defined(__MK66FX1M0__) //teensy 3.6 only
-  // OutputtingCanbus outputs (Victron) to Can2 (1st SPI Canbus) on teensey 3.6 set ups utilising ACAN2515 library
-
-  CANMessage message ;
-  // Can messgaes for the Victron Sytem over CAN, usefull as it can be used for a home brew display etc.
+    // Code modified to use ACAN2515 / ACAN
+    
+    message.id  = 0x351;
+    message.len = 8;
+    if (storagemode == 0)
+    {
+      message.data16[0] = (uint16_t((settings.ChargeVsetpoint * settings.Scells ) * 10));
+    }
+    else
+    {
+      message.data16[0] = (uint16_t((settings.StoreVsetpoint * settings.Scells ) * 10));
+    }
+    message.data16[1] = lowByte(chargecurrent);
+    message.data16[2] = lowByte(discurrent );
+    message.data16[3] = lowByte(uint16_t((settings.DischVsetpoint * settings.Scells) * 10));
+    
+    if (CAN_OUT == 0) {ACAN::can0.tryToSend (message) ;}
+    if (CAN_OUT == 1) {ACAN::can1.tryToSend (message) ;}
+    if (CAN_OUT == 2) {can2.tryToSend (message) ;}
+    if (CAN_OUT == 3) {can3.tryToSend (message) ;}
+    if (CAN_OUT == 4) {can4.tryToSend (message) ;}
   
-  // Brodcast on Can ID 0x351 for charge setpoint, chargecurrent, discharge current & discharv=ge voltage setpoints
+    message.id  = 0x355;
+    message.len = 8;
+    message.data[0] = lowByte(SOC);
+    message.data[1] = highByte(SOC);
+    message.data[2] = lowByte(SOH);
+    message.data[3] = highByte(SOH);
+    message.data[4] = lowByte(SOC * 10);
+    message.data[5] = highByte(SOC * 10);
+    message.data[6] = 0;
+    message.data[7] = 0;
+    
+    if (CAN_OUT == 0) {ACAN::can0.tryToSend (message) ;}
+    if (CAN_OUT == 1) {ACAN::can1.tryToSend (message) ;}
+    if (CAN_OUT == 2) {can2.tryToSend (message) ;}
+    if (CAN_OUT == 3) {can3.tryToSend (message) ;}
+    if (CAN_OUT == 4) {can4.tryToSend (message) ;}
   
-  message.id  = 0x351;
-  if (storagemode == 0)
-  {
-    message.data16[0] = uint16_t((settings.ChargeVsetpoint * settings.Scells ) * 10);
-  }
-  else
-  {
-    message.data16[0] = uint16_t((settings.StoreVsetpoint * settings.Scells ) * 10);
-  }
-  message.data16[1] = chargecurrent;
-  message.data16[2] = discurrent ;
-  message.data16[3] = uint16_t((settings.DischVsetpoint * settings.Scells) * 10);
-  const bool ok = can.tryToSend (message) ;
-  //msgsent = can2.tryToSend (message) ;
-  //if (msgsent != true) { delay (5) ;}  // if the transmit buffer is full wait 5ms (so it is clear for the next messgae), since these messages are non critical a missed message will not be a major problem
+    message.id  = 0x356;
+    message.len = 8;
+    message.data16[0] = (uint16_t(bms.getPackVoltage() * 100));
+    message.data16[1] = (long(currentact / 100));
+    message.data16[2] = (int16_t(bms.getAvgTemperature() * 10));
+    message.data16[3] = 0;
 
-  /*
-  // Brodcast on Can ID 0x355 for State of charge, State of heath (Not Avaiable from slaves) charge setpoint, SOC x10 ? and 4th data block is blank
-  message.id  = 0x355;
-  message.data16[0] = SOC;
-  message.data16[1] = SOH;
-  message.data16[2] = SOC * 10;
-  message.data16[3] = 0;
-  msgsent = can2.tryToSend (message) ;
-  if (msgsent != true) { delay (5); } // if the transmit buffer is full wait 5ms (so it is clear for the next messgae), since these messages are non critical a missed message will not be a major problem
+    if (CAN_OUT == 0) {ACAN::can0.tryToSend (message) ;}
+    if (CAN_OUT == 1) {ACAN::can1.tryToSend (message) ;}
+    if (CAN_OUT == 2) {can2.tryToSend (message) ;}
+    if (CAN_OUT == 3) {can3.tryToSend (message) ;}
+    if (CAN_OUT == 4) {can4.tryToSend (message) ;}
+  
+    delay(2);
+    message.id  = 0x35A;
+    message.len = 8;
+    message.data[0] = alarm[0];//High temp  Low Voltage | High Voltage
+    message.data[1] = alarm[1]; // High Discharge Current | Low Temperature
+    message.data[2] = alarm[2]; //Internal Failure | High Charge current
+    message.data[3] = alarm[3];// Cell Imbalance
+    message.data[4] = warning[0];//High temp  Low Voltage | High Voltage
+    message.data[5] = warning[1];// High Discharge Current | Low Temperature
+    message.data[6] = warning[2];//Internal Failure | High Charge current
+    message.data[7] = warning[3];// Cell Imbalance
+    
+    if (CAN_OUT == 0) {ACAN::can0.tryToSend (message) ;}
+    if (CAN_OUT == 1) {ACAN::can1.tryToSend (message) ;}
+    if (CAN_OUT == 2) {can2.tryToSend (message) ;}
+    if (CAN_OUT == 3) {can3.tryToSend (message) ;}
+    if (CAN_OUT == 4) {can4.tryToSend (message) ;}
+  
+    message.id  = 0x35E;
+    message.len = 8;
+    message.data[0] = bmsname[0];
+    message.data[1] = bmsname[1];
+    message.data[2] = bmsname[2];
+    message.data[3] = bmsname[3];
+    message.data[4] = bmsname[4];
+    message.data[5] = bmsname[5];
+    message.data[6] = bmsname[6];
+    message.data[7] = bmsname[7];
+    
+    if (CAN_OUT == 0) {ACAN::can0.tryToSend (message) ;}
+    if (CAN_OUT == 1) {ACAN::can1.tryToSend (message) ;}
+    if (CAN_OUT == 2) {can2.tryToSend (message) ;}
+    if (CAN_OUT == 3) {can3.tryToSend (message) ;}
+    if (CAN_OUT == 4) {can4.tryToSend (message) ;}
+  
+    delay(2);
+    message.id  = 0x370;
+    message.len = 8;
+    message.data[0] = bmsmanu[0];
+    message.data[1] = bmsmanu[1];
+    message.data[2] = bmsmanu[2];
+    message.data[3] = bmsmanu[3];
+    message.data[4] = bmsmanu[4];
+    message.data[5] = bmsmanu[5];
+    message.data[6] = bmsmanu[6];
+    message.data[7] = bmsmanu[7];
+    
+    if (CAN_OUT == 0) {ACAN::can0.tryToSend (message) ;}
+    if (CAN_OUT == 1) {ACAN::can1.tryToSend (message) ;}
+    if (CAN_OUT == 2) {can2.tryToSend (message) ;}
+    if (CAN_OUT == 3) {can3.tryToSend (message) ;}
+    if (CAN_OUT == 4) {can4.tryToSend (message) ;}
+  
+    delay(2);
+    message.id  = 0x373;
+    message.len = 8;
+    message.data16[0] = (uint16_t(bms.getLowCellVolt() * 1000));
+    message.data16[1] = (uint16_t(bms.getHighCellVolt() * 1000));
+    message.data16[2] = (uint16_t(bms.getLowTemperature() + 273.15));
+    message.data16[3] = (uint16_t(bms.getHighTemperature() + 273.15));
+    
+    if (CAN_OUT == 0) {ACAN::can0.tryToSend (message) ;}
+    if (CAN_OUT == 1) {ACAN::can1.tryToSend (message) ;}
+    if (CAN_OUT == 2) {can2.tryToSend (message) ;}
+    if (CAN_OUT == 3) {can3.tryToSend (message) ;}
+    if (CAN_OUT == 4) {can4.tryToSend (message) ;}
+  
+    delay(2);
+    message.id  = 0x379; //Installed capacity
+    message.len = 2;
+    message.data[0] = (uint16_t(settings.Pstrings * settings.CAP));
+    
+    if (CAN_OUT == 0) {ACAN::can0.tryToSend (message) ;}
+    if (CAN_OUT == 1) {ACAN::can1.tryToSend (message) ;}
+    if (CAN_OUT == 2) {can2.tryToSend (message) ;}
+    if (CAN_OUT == 3) {can3.tryToSend (message) ;}
+    if (CAN_OUT == 4) {can4.tryToSend (message) ;}
 
-  // Brodcast on Can ID 0x356 for Pack Voltage (V..TBC), current draw (mA), Average Temperature (deg C) and 4th data block is blank
-  message.id  = 0x356;
-  message.data16[0] = uint16_t(bms.getPackVoltage() * 100);
-  message.data16[1] = long(currentact / 100);
-  message.data16[2] = int16_t(bms.getAvgTemperature() * 10);
-  message.data16[3] = 0;
-  msgsent = can2.tryToSend (message) ;
-  if (msgsent != true) { delay (5); } // if the transmit buffer is full wait 5ms (so it is clear for the next messgae), since these messages are non critical a missed message will not be a major problem
+    delay(2);
+    message.id  = 0x372;
+    message.len = 8;
+    message.data16[0] = lowByte(bms.getNumModules());
+    message.data16[1] = highByte(bms.getNumModules());
+    message.data16[2] = 0x00;
+    message.data16[3] = 0x00;
+    message.data16[4] = 0x00;
+    message.data16[5] = 0x00;
+    message.data16[6] = 0x00;
+    message.data16[7] = 0x00;
+    
+    if (CAN_OUT == 0) {ACAN::can0.tryToSend (message) ;}
+    if (CAN_OUT == 1) {ACAN::can1.tryToSend (message) ;}
+    if (CAN_OUT == 2) {can2.tryToSend (message) ;}
+    if (CAN_OUT == 3) {can3.tryToSend (message) ;}
+    if (CAN_OUT == 4) {can4.tryToSend (message) ;}
+      
 
-  // Broadcast on Can ID 0x35A warnings and alarms 
-*/
-  message.id  = 0x35A;
-  message.data[0] = alarm[0];//High temp  Low Voltage | High Voltage
-  message.data[1] = alarm[1]; // High Discharge Current | Low Temperature
-  message.data[2] = alarm[2]; //Internal Failure | High Charge current
-  message.data[3] = alarm[3];// Cell Imbalance
-  message.data[4] = warning[0];//High temp  Low Voltage | High Voltage
-  message.data[5] = warning[1];// High Discharge Current | Low Temperature
-  message.data[6] = warning[2];//Internal Failure | High Charge current
-  message.data[7] = warning[3];// Cell Imbalance
-  can.tryToSend (message) ;
-  //if (msgsent != true) { delay (5); } // if the transmit buffer is full wait 5ms (so it is clear for the next messgae), since these messages are non critical a missed message will not be a major problem
 
-   
-#else
-  // Original Simp BMS code
-  msg.id  = 0x351;
-  msg.len = 8;
-  if (storagemode == 0)
-  {
-    msg.buf[0] = lowByte(uint16_t((settings.ChargeVsetpoint * settings.Scells ) * 10));
-    msg.buf[1] = highByte(uint16_t((settings.ChargeVsetpoint * settings.Scells ) * 10));
-  }
-  else
-  {
-    msg.buf[0] = lowByte(uint16_t((settings.StoreVsetpoint * settings.Scells ) * 10));
-    msg.buf[1] = highByte(uint16_t((settings.StoreVsetpoint * settings.Scells ) * 10));
-  }
-  msg.buf[2] = lowByte(chargecurrent);
-  msg.buf[3] = highByte(chargecurrent);
-  msg.buf[4] = lowByte(discurrent );
-  msg.buf[5] = highByte(discurrent);
-  msg.buf[6] = lowByte(uint16_t((settings.DischVsetpoint * settings.Scells) * 10));
-  msg.buf[7] = highByte(uint16_t((settings.DischVsetpoint * settings.Scells) * 10));
-  Can0.write(msg);
-
-  msg.id  = 0x355;
-  msg.len = 8;
-  msg.buf[0] = lowByte(SOC);
-  msg.buf[1] = highByte(SOC);
-  msg.buf[2] = lowByte(SOH);
-  msg.buf[3] = highByte(SOH);
-  msg.buf[4] = lowByte(SOC * 10);
-  msg.buf[5] = highByte(SOC * 10);
-  msg.buf[6] = 0;
-  msg.buf[7] = 0;
-  Can0.write(msg);
-
-  msg.id  = 0x356;
-  msg.len = 8;
-  msg.buf[0] = lowByte(uint16_t(bms.getPackVoltage() * 100));
-  msg.buf[1] = highByte(uint16_t(bms.getPackVoltage() * 100));
-  msg.buf[2] = lowByte(long(currentact / 100));
-  msg.buf[3] = highByte(long(currentact / 100));
-  msg.buf[4] = lowByte(int16_t(bms.getAvgTemperature() * 10));
-  msg.buf[5] = highByte(int16_t(bms.getAvgTemperature() * 10));
-  msg.buf[6] = 0;
-  msg.buf[7] = 0;
-  Can0.write(msg);
-
-  delay(2);
-  msg.id  = 0x35A;
-  msg.len = 8;
-  msg.buf[0] = alarm[0];//High temp  Low Voltage | High Voltage
-  msg.buf[1] = alarm[1]; // High Discharge Current | Low Temperature
-  msg.buf[2] = alarm[2]; //Internal Failure | High Charge current
-  msg.buf[3] = alarm[3];// Cell Imbalance
-  msg.buf[4] = warning[0];//High temp  Low Voltage | High Voltage
-  msg.buf[5] = warning[1];// High Discharge Current | Low Temperature
-  msg.buf[6] = warning[2];//Internal Failure | High Charge current
-  msg.buf[7] = warning[3];// Cell Imbalance
-  Can0.write(msg);
-
-  msg.id  = 0x35E;
-  msg.len = 8;
-  msg.buf[0] = bmsname[0];
-  msg.buf[1] = bmsname[1];
-  msg.buf[2] = bmsname[2];
-  msg.buf[3] = bmsname[3];
-  msg.buf[4] = bmsname[4];
-  msg.buf[5] = bmsname[5];
-  msg.buf[6] = bmsname[6];
-  msg.buf[7] = bmsname[7];
-  Can0.write(msg);
-
-  delay(2);
-  msg.id  = 0x370;
-  msg.len = 8;
-  msg.buf[0] = bmsmanu[0];
-  msg.buf[1] = bmsmanu[1];
-  msg.buf[2] = bmsmanu[2];
-  msg.buf[3] = bmsmanu[3];
-  msg.buf[4] = bmsmanu[4];
-  msg.buf[5] = bmsmanu[5];
-  msg.buf[6] = bmsmanu[6];
-  msg.buf[7] = bmsmanu[7];
-  Can0.write(msg);
-
-  delay(2);
-  msg.id  = 0x373;
-  msg.len = 8;
-  msg.buf[0] = lowByte(uint16_t(bms.getLowCellVolt() * 1000));
-  msg.buf[1] = highByte(uint16_t(bms.getLowCellVolt() * 1000));
-  msg.buf[2] = lowByte(uint16_t(bms.getHighCellVolt() * 1000));
-  msg.buf[3] = highByte(uint16_t(bms.getHighCellVolt() * 1000));
-  msg.buf[4] = lowByte(uint16_t(bms.getLowTemperature() + 273.15));
-  msg.buf[5] = highByte(uint16_t(bms.getLowTemperature() + 273.15));
-  msg.buf[6] = lowByte(uint16_t(bms.getHighTemperature() + 273.15));
-  msg.buf[7] = highByte(uint16_t(bms.getHighTemperature() + 273.15));
-  Can0.write(msg);
-
-  delay(2);
-  msg.id  = 0x379; //Installed capacity
-  msg.len = 2;
-  msg.buf[0] = lowByte(uint16_t(settings.Pstrings * settings.CAP));
-  msg.buf[1] = highByte(uint16_t(settings.Pstrings * settings.CAP));
-  /*
-      delay(2);
-    msg.id  = 0x378; //Installed capacity
-    msg.len = 2;
-    //energy in 100wh/unit
-    msg.buf[0] =
-    msg.buf[1] =
-    msg.buf[2] =
-    msg.buf[3] =
-    //energy out 100wh/unit
-    msg.buf[4] =
-    msg.buf[5] =
-    msg.buf[6] =
-    msg.buf[7] =
-  */
-  delay(2);
-  msg.id  = 0x372;
-  msg.len = 8;
-  msg.buf[0] = lowByte(bms.getNumModules());
-  msg.buf[1] = highByte(bms.getNumModules());
-  msg.buf[2] = 0x00;
-  msg.buf[3] = 0x00;
-  msg.buf[4] = 0x00;
-  msg.buf[5] = 0x00;
-  msg.buf[6] = 0x00;
-  msg.buf[7] = 0x00;
-  Can0.write(msg);
-#endif
 }
 
 void BMVmessage()//communication with the Victron Color Control System over VEdirect
@@ -3057,99 +3086,108 @@ void menu()
 
 void canread()
 {
-  Can0.read(inMsg);
+  if (CAN_CUR ==0) {ACAN::can0.receive (message);}
+  if (CAN_CUR ==1) {ACAN::can1.receive (message);}
+  if (CAN_CUR ==2) {can2.receive (message);}
+  if (CAN_CUR ==3) {can3.receive (message);}
+  if (CAN_CUR ==4) {can4.receive (message);}
+  
   // Read data: len = data length, buf = data byte(s)
-  if (inMsg.id == 0x3c2)
+  if (message.id == 0x3c2)
   {
     CAB300();
   }
 
-  if (inMsg.id == 0x0BB) {
-    VWShunt(inMsg);
+/*
+  if (message.id == 0x0BB) {
+    VWShunt(message);
   }
 
-  if (inMsg.id < 0x300)//do VW BMS magic if ids are ones identified to be modules
+  if (message.id < 0x300)//do VW BMS magic if ids are ones identified to be modules
   {
     if (candebug == 1)
     {
-      bms.decodecan(inMsg, 1); //do VW BMS if ids are ones identified to be modules
+      bms.decodecan(message, 1); //do VW BMS if ids are ones identified to be modules
     }
     else
     {
-      bms.decodecan(inMsg, 0); //do VW BMS if ids are ones identified to be modules
+      bms.decodecan(message, 0); //do VW BMS if ids are ones identified to be modules
     }
   }
 
-  if ((inMsg.id & 0x1FFFFFFF) < 0x1A5554F0 && (inMsg.id & 0x1FFFFFFF) > 0x1A555400)   // Determine if ID is Temperature CAN-ID
+  if ((message.id & 0x1FFFFFFF) < 0x1A5554F0 && (message.id & 0x1FFFFFFF) > 0x1A555400)   // Determine if ID is Temperature CAN-ID
   {
     if (candebug == 1)
     {
-      bms.decodetemp(inMsg, 1);
+      bms.decodetemp(message, 1);
 
     }
     else
     {
-      bms.decodetemp(inMsg, 0);
+      bms.decodetemp(message, 0);
     }
   }
 
   if (settings.chargertype == Outlander) {
 
-    if (inMsg.id == 0x389) {
-      outlandervoltage = inMsg.buf[0] * 2;
-      outlandercurrent = inMsg.buf[2];
-      outlandertemp = inMsg.buf[4] - 40; //(starts at -40degC, +1degC/bit)  
+    if (message.id == 0x389) {
+      outlandervoltage = message.data[0] * 2;
+      outlandercurrent = message.data[2];
+      outlandertemp = message.data[4] - 40; //(starts at -40degC, +1degC/bit)  
     }
   }
-
+*/
   if (candebug == 1)
   {
     Serial.print(millis());
-    if ((inMsg.id & 0x80000000) == 0x80000000)    // Determine if ID is standard (11 bits) or extended (29 bits)
-      sprintf(msgString, "Extended ID: 0x%.8lX  DLC: %1d  Data:", (inMsg.id & 0x1FFFFFFF), inMsg.len);
+    if ((message.id & 0x80000000) == 0x80000000)    // Determine if ID is standard (11 bits) or extended (29 bits)
+      sprintf(msgString, "Extended ID: 0x%.8lX  DLC: %1d  Data:", (message.id & 0x1FFFFFFF), message.len);
     else
-      sprintf(msgString, ",0x%.3lX,false,%1d", inMsg.id, inMsg.len);
+      sprintf(msgString, ",0x%.3lX,false,%1d", message.id, message.len);
 
     Serial.print(msgString);
 
-    if ((inMsg.id & 0x40000000) == 0x40000000) {  // Determine if message is a remote request frame.
+    if ((message.id & 0x40000000) == 0x40000000) {  // Determine if message is a remote request frame.
       sprintf(msgString, " REMOTE REQUEST FRAME");
       Serial.print(msgString);
     } else {
-      for (byte i = 0; i < inMsg.len; i++) {
-        sprintf(msgString, ", 0x%.2X", inMsg.buf[i]);
+      for (byte i = 0; i < message.len; i++) {
+        sprintf(msgString, ", 0x%.2X", message.data[i]);
         Serial.print(msgString);
       }
     }
 
     Serial.println();
   }
+/*
 // this where we put our specific (spaceballs) teensy 3.6 code
 #if defined(__MK66FX1M0__)
 
-  Can1.read(inMsg1);
+  can1.read(message1);
   // Read data: len = data length, buf = data byte(s)
-  // Note: the Second canbus does not obay can debug mode in software, if you need to debug change (inMsg1,0) to (inMsg1,1).
-  if (inMsg1.id >= 0x1B0 && inMsg1.id <= 0x1CF)// This will identifies mesgages from VW modules id's 0x1B0 to 0x1CF (standard pack), this is set so that a single pack on the second canbus will translate the modules id's to 9 to 16.
+  // Note: the Second canbus does not obay can debug mode in software, if you need to debug change (message1,0) to (message1,1).
+  if (message1.id >= 0x1B0 && message1.id <= 0x1CF)// This will identifies mesgages from VW modules id's 0x1B0 to 0x1CF (standard pack), this is set so that a single pack on the second canbus will translate the modules id's to 9 to 16.
   {
-      inMsg1.id = inMsg1.id + 0x20;// This offsets the 'inMsg.id by 32... for example from 0x1B0 (432) to 0x1D0 (464),
-      bms.decodecan(inMsg1, 0); //do VW BMS if ids are ones identified to be modules
+      message1.id = message1.id + 0x20;// This offsets the 'message.id by 32... for example from 0x1B0 (432) to 0x1D0 (464),
+      bms.decodecan(message1, 0); //do VW BMS if ids are ones identified to be modules
   }
 
-  if ((inMsg1.id >= 0x1A555401) && (inMsg1.id <= 0x1A555408))   // This only allows the Temperature CAN-ID's to be offset by 8, [just incase we want to do something else on this bus later].
+  if ((message1.id >= 0x1A555401) && (message1.id <= 0x1A555408))   // This only allows the Temperature CAN-ID's to be offset by 8, [just incase we want to do something else on this bus later].
   {
-      inMsg1.id = inMsg1.id + 0x8; // this add 8 to the msgid of the temperture can id
-      bms.decodetemp(inMsg1, 0);
+      message1.id = message1.id + 0x8; // this add 8 to the msgid of the temperture can id
+      bms.decodetemp(message1, 0);
   }  
 #endif 
+*/
 }
 
-void VWShunt(CAN_message_t inMsg) {
+/*
+void VWShunt(CANMessage message) {
 
     
   if (settings.cursens == Canbus)
   {
-    int16_t VWmillis = inMsg.buf[1] << 8 & 0xFF;
+    int16_t VWmillis = message.data[1] << 8 & 0xFF;
     RawCur = VWmillis;
     getcurrent();
 
@@ -3158,12 +3196,12 @@ void VWShunt(CAN_message_t inMsg) {
     Serial.print("mA ");
   }
 }
-
+*/
 void CAB300()
 {
   for (int i = 0; i < 4; i++)
   {
-    inbox = (inbox << 8) | inMsg.buf[i];
+    inbox = (inbox << 8) | message.data[i];
   }
   CANmilliamps = inbox;
   if (CANmilliamps > 0x80000000)
@@ -3366,56 +3404,68 @@ void outputdebug()
 
 void sendcommand()
 {
-  msg.id  = controlid;
-  msg.len = 8;
-  msg.buf[0] = 0x00;
-  msg.buf[1] = 0x00;
-  msg.buf[2] = 0x00;
-  msg.buf[3] = 0x00;
-  msg.buf[4] = 0x00;
-  msg.buf[5] = 0x00;
-  msg.buf[6] = 0x00;
-  msg.buf[7] = 0x00;
-  Can0.write(msg);
+  // THIS IS WHERE WE SEND THE BMS SLAVE WAKE UP COMMANDS
+  message.id  = controlid;
+  message.len = 8;
+  message.data[0] = 0x00;
+  message.data[1] = 0x00;
+  message.data[2] = 0x00;
+  message.data[3] = 0x00;
+  message.data[4] = 0x00;
+  message.data[5] = 0x00;
+  message.data[6] = 0x00;
+  message.data[7] = 0x00;
+    if (CAN_PK1 == 0) {ACAN::can0.tryToSend (message) ;}
+    if (CAN_PK1 == 1) {ACAN::can1.tryToSend (message) ;}
+    if (CAN_PK1 == 2) {can2.tryToSend (message) ;}
+    if (CAN_PK1 == 3) {can3.tryToSend (message) ;}
+    if (CAN_PK1 == 4) {can4.tryToSend (message) ;}
+  
   delay(1);
-  msg.id  = controlid;
-  msg.len = 8;
-  msg.buf[0] = 0x45;
-  msg.buf[1] = 0x01;
-  msg.buf[2] = 0x28;
-  msg.buf[3] = 0x00;
-  msg.buf[4] = 0x00;
-  msg.buf[5] = 0x00;
-  msg.buf[6] = 0x00;
-  msg.buf[7] = 0x30;
-  Can0.write(msg);
+  message.id  = controlid;
+  message.len = 8;
+  message.data[0] = 0x45;
+  message.data[1] = 0x01;
+  message.data[2] = 0x28;
+  message.data[3] = 0x00;
+  message.data[4] = 0x00;
+  message.data[5] = 0x00;
+  message.data[6] = 0x00;
+  message.data[7] = 0x30;
+    if (CAN_PK1 == 0) {ACAN::can0.tryToSend (message) ;}
+    if (CAN_PK1 == 1) {ACAN::can1.tryToSend (message) ;}
+    if (CAN_PK1 == 2) {can2.tryToSend (message) ;}
+    if (CAN_PK1 == 3) {can3.tryToSend (message) ;}
+    if (CAN_PK1 == 4) {can4.tryToSend (message) ;}
 
+/*
   #if defined(__MK66FX1M0__) //teensy 3.6 only
   //this sends the extra wak up comands to the vw modules on can1 (in addition to can 0 above)
-msg.id  = controlid;
-  msg.len = 8;
-  msg.buf[0] = 0x00;
-  msg.buf[1] = 0x00;
-  msg.buf[2] = 0x00;
-  msg.buf[3] = 0x00;
-  msg.buf[4] = 0x00;
-  msg.buf[5] = 0x00;
-  msg.buf[6] = 0x00;
-  msg.buf[7] = 0x00;
-  Can1.write(msg);
+message.id  = controlid;
+  message.len = 8;
+  message.data[0] = 0x00;
+  message.data[1] = 0x00;
+  message.data[2] = 0x00;
+  message.data[3] = 0x00;
+  message.data[4] = 0x00;
+  message.data[5] = 0x00;
+  message.data[6] = 0x00;
+  message.data[7] = 0x00;
+  can1.write(msg);
   delay(1);
-  msg.id  = controlid;
-  msg.len = 8;
-  msg.buf[0] = 0x45;
-  msg.buf[1] = 0x01;
-  msg.buf[2] = 0x28;
-  msg.buf[3] = 0x00;
-  msg.buf[4] = 0x00;
-  msg.buf[5] = 0x00;
-  msg.buf[6] = 0x00;
-  msg.buf[7] = 0x30;
-  Can1.write(msg);
+  message.id  = controlid;
+  message.len = 8;
+  message.data[0] = 0x45;
+  message.data[1] = 0x01;
+  message.data[2] = 0x28;
+  message.data[3] = 0x00;
+  message.data[4] = 0x00;
+  message.data[5] = 0x00;
+  message.data[6] = 0x00;
+  message.data[7] = 0x30;
+  can1.write(msg);
   #endif
+  */
 }
 
 void resetwdog()
@@ -3586,124 +3636,28 @@ void dashupdate()
 }
 
 
-void Serialexp()
-{
-  /*
-    incomingByte = SERIALBMS.read(); // read the incoming byte:
-    Serial.println();
-    Serial.print(incomingByte);
-    Serial.print("|");
-
-    incomingByte = SERIALBMS.read(); // read the incoming byte:
-    if (incomingByte == 0xFF)
-    {
-    Serial.println();
-    Serial.print(incomingByte);
-    incomingByte = SERIALBMS.read(); // read the incoming byte:
-    Serial.print("|");
-    Serial.print(incomingByte);
-    Serial.print("|");
-    Serial.print(incomingByte);
-    if (settings.Serialexp == 1) //Do Serial Master Things
-    {
-    Serial.print(SERIALBMS.read(), HEX);
-    Serial.print("|");
-    Serial.print(SERIALBMS.read(), HEX);
-    }
-    if (settings.Serialexp == 2) //Do Serial Slave Things
-    {
-    switch (incomingByte)
-    {
-    case 0x00: //q to go back to main menu
-    if (SerialID == 0)
-    {
-      SerialID = SERIALBMS.read();
-      SERIALBMS.write(0x01); //response is 1 higher than sent id
-      SERIALBMS.write(SerialID);
-
-      Serial.print("New ID : ");
-      Serial.print(SerialID);
-    }
-    else
-    {
-      SERIALBMS.write(0xFF);
-      SERIALBMS.write(0x00);
-      SERIALBMS.write(SERIALBMS.read());
-    }
-    break;
-    }
-    }
-    }
-  */
-}
-
-void SerialReqData()
-{
-  /*
-    SERIALBMS.write(0x12);
-  */
-}
-
-void Serialslaveinit()
-{
-  /*
-    int buff[8];
-    while (1 == 1)
-    {
-    for (int I = 1; I < 51; I++)
-    {
-      SERIALBMS.write(0xFF);
-      SERIALBMS.write(0x00);
-      SERIALBMS.write(I);
-      Serial.write(" | ");
-      delay(2);
-      if (SERIALBMS.available() > 0)
-      {
-        for (int x = 0; x < 4; x++)
-        {
-          buff[x] = SERIALBMS.read();
-          Serial.write(buff[0]);
-          Serial.write(buff[1]);
-          Serial.write(buff[2]);
-        }
-        if (buff[0] = 0xFF)
-        {
-          if (buff[1] == I)
-          {
-            break;
-          }
-        }
-      }
-      else
-      {
-        Serial.write("No Serial Slaves Found");
-        break;
-      }
-
-    }
-    break;
-    }
-  */
-}
-
-
 void chargercomms()
 {
+/*
   if (settings.chargertype == Elcon)
   {
-    msg.id  =  0x1806E5F4; //broadcast to all Elteks
-    msg.len = 8;
-    msg.ext = 1;
-    msg.buf[0] = highByte(uint16_t(settings.ChargeVsetpoint * settings.Scells * 10));
-    msg.buf[1] = lowByte(uint16_t(settings.ChargeVsetpoint * settings.Scells * 10));
-    msg.buf[2] = highByte(chargecurrent / ncharger);
-    msg.buf[3] = lowByte(chargecurrent / ncharger);
-    msg.buf[4] = 0x00;
-    msg.buf[5] = 0x00;
-    msg.buf[6] = 0x00;
-    msg.buf[7] = 0x00;
-
-    Can0.write(msg);
+    message.id  =  0x1806E5F4; //broadcast to all Elteks
+    message.len = 8;
+    message.ext = 1;
+    msg.data[0] = highByte(uint16_t(settings.ChargeVsetpoint * settings.Scells * 10));
+    msg.data[1] = lowByte(uint16_t(settings.ChargeVsetpoint * settings.Scells * 10));
+    msg.data[2] = highByte(chargecurrent / ncharger);
+    msg.data[3] = lowByte(chargecurrent / ncharger);
+    msg.data[4] = 0x00;
+    msg.data[5] = 0x00;
+    msg.data[6] = 0x00;
+    msg.data[7] = 0x00;
+    if (CAN_CH1 == 0) {ACAN::can0.tryToSend (message) ;}
+    if (CAN_CH1 == 1) {ACAN::can1.tryToSend (message) ;}
+    if (CAN_CH1 == 2) {can2.tryToSend (message) ;}
+    if (CAN_CH1 == 3) {can3.tryToSend (message) ;}
+    if (CAN_CH1 == 4) {can4.tryToSend (message) ;}
+    
     msg.ext = 0;
   }
 
@@ -3711,155 +3665,145 @@ void chargercomms()
   {
     msg.id  = 0x2FF; //broadcast to all Elteks
     msg.len = 7;
-    msg.buf[0] = 0x01;
-    msg.buf[1] = lowByte(1000);
-    msg.buf[2] = highByte(1000);
-    msg.buf[3] = lowByte(uint16_t(settings.ChargeVsetpoint * settings.Scells * 10));
-    msg.buf[4] = highByte(uint16_t(settings.ChargeVsetpoint * settings.Scells * 10));
-    msg.buf[5] = lowByte(chargecurrent / ncharger);
-    msg.buf[6] = highByte(chargecurrent / ncharger);
+    msg.data[0] = 0x01;
+    msg.data[1] = lowByte(1000);
+    msg.data[2] = highByte(1000);
+    msg.data[3] = lowByte(uint16_t(settings.ChargeVsetpoint * settings.Scells * 10));
+    msg.data[4] = highByte(uint16_t(settings.ChargeVsetpoint * settings.Scells * 10));
+    msg.data[5] = lowByte(chargecurrent / ncharger);
+    msg.data[6] = highByte(chargecurrent / ncharger);
 
-    Can0.write(msg);
+    can0.write(msg);
   }
   if (settings.chargertype == BrusaNLG5)
   {
     msg.id  = chargerid1;
     msg.len = 7;
-    msg.buf[0] = 0x80;
-    /*
-      if (chargertoggle == 0)
-      {
-      msg.buf[0] = 0x80;
-      chargertoggle++;
-      }
-      else
-      {
-      msg.buf[0] = 0xC0;
-      chargertoggle = 0;
-      }
-    */
+    msg.data[0] = 0x80;
+
     if (digitalRead(IN2) == LOW)//Gen OFF
     {
-      msg.buf[1] = highByte(maxac1 * 10);
-      msg.buf[2] = lowByte(maxac1 * 10);
+      msg.data[1] = highByte(maxac1 * 10);
+      msg.data[2] = lowByte(maxac1 * 10);
     }
     else
     {
-      msg.buf[1] = highByte(maxac2 * 10);
-      msg.buf[2] = lowByte(maxac2 * 10);
+      msg.data[1] = highByte(maxac2 * 10);
+      msg.data[2] = lowByte(maxac2 * 10);
     }
-    msg.buf[5] = highByte(chargecurrent / ncharger);
-    msg.buf[6] = lowByte(chargecurrent / ncharger);
-    msg.buf[3] = highByte(uint16_t(((settings.ChargeVsetpoint * settings.Scells ) - chargerendbulk) * 10));
-    msg.buf[4] = lowByte(uint16_t(((settings.ChargeVsetpoint * settings.Scells ) - chargerendbulk)  * 10));
-    Can0.write(msg);
+    msg.data[5] = highByte(chargecurrent / ncharger);
+    msg.data[6] = lowByte(chargecurrent / ncharger);
+    msg.data[3] = highByte(uint16_t(((settings.ChargeVsetpoint * settings.Scells ) - chargerendbulk) * 10));
+    msg.data[4] = lowByte(uint16_t(((settings.ChargeVsetpoint * settings.Scells ) - chargerendbulk)  * 10));
+    can0.write(msg);
 
     delay(2);
 
     msg.id  = chargerid2;
     msg.len = 7;
-    msg.buf[0] = 0x80;
+    msg.data[0] = 0x80;
     if (digitalRead(IN2) == LOW)//Gen OFF
     {
-      msg.buf[1] = highByte(maxac1 * 10);
-      msg.buf[2] = lowByte(maxac1 * 10);
+      msg.data[1] = highByte(maxac1 * 10);
+      msg.data[2] = lowByte(maxac1 * 10);
     }
     else
     {
-      msg.buf[1] = highByte(maxac2 * 10);
-      msg.buf[2] = lowByte(maxac2 * 10);
+      msg.data[1] = highByte(maxac2 * 10);
+      msg.data[2] = lowByte(maxac2 * 10);
     }
-    msg.buf[3] = highByte(uint16_t(((settings.ChargeVsetpoint * settings.Scells ) - chargerend) * 10));
-    msg.buf[4] = lowByte(uint16_t(((settings.ChargeVsetpoint * settings.Scells ) - chargerend) * 10));
-    msg.buf[5] = highByte(chargecurrent / ncharger);
-    msg.buf[6] = lowByte(chargecurrent / ncharger);
-    Can0.write(msg);
+    msg.data[3] = highByte(uint16_t(((settings.ChargeVsetpoint * settings.Scells ) - chargerend) * 10));
+    msg.data[4] = lowByte(uint16_t(((settings.ChargeVsetpoint * settings.Scells ) - chargerend) * 10));
+    msg.data[5] = highByte(chargecurrent / ncharger);
+    msg.data[6] = lowByte(chargecurrent / ncharger);
+    can0.write(msg);
   }
   if (settings.chargertype == ChevyVolt)
   {
     msg.id  = 0x30E;
     msg.len = 1;
-    msg.buf[0] = 0x02; //only HV charging , 0x03 hv and 12V charging
-    Can0.write(msg);
+    msg.data[0] = 0x02; //only HV charging , 0x03 hv and 12V charging
+    can0.write(msg);
 
     msg.id  = 0x304;
     msg.len = 4;
-    msg.buf[0] = 0x40; //fixed
+    msg.data[0] = 0x40; //fixed
     if ((chargecurrent * 2) > 255)
     {
-      msg.buf[1] = 255;
+      msg.data[1] = 255;
     }
     else
     {
-      msg.buf[1] = (chargecurrent * 2);
+      msg.data[1] = (chargecurrent * 2);
     }
     if ((settings.ChargeVsetpoint * settings.Scells ) > 200)
     {
-      msg.buf[2] = highByte(uint16_t((settings.ChargeVsetpoint * settings.Scells ) * 2));
-      msg.buf[3] = lowByte(uint16_t((settings.ChargeVsetpoint * settings.Scells ) * 2));
+      msg.data[2] = highByte(uint16_t((settings.ChargeVsetpoint * settings.Scells ) * 2));
+      msg.data[3] = lowByte(uint16_t((settings.ChargeVsetpoint * settings.Scells ) * 2));
     }
     else
     {
-      msg.buf[2] = highByte( 400);
-      msg.buf[3] = lowByte( 400);
+      msg.data[2] = highByte( 400);
+      msg.data[3] = lowByte( 400);
     }
-    Can0.write(msg);
+    can0.write(msg);
   }
 
   if (settings.chargertype == Coda)
   {
     msg.id  = 0x050;
     msg.len = 8;
-    msg.buf[0] = 0x00;
-    msg.buf[1] = 0xDC;
+    msg.data[0] = 0x00;
+    msg.data[1] = 0xDC;
     if ((settings.ChargeVsetpoint * settings.Scells ) > 200)
     {
-      msg.buf[2] = highByte(uint16_t((settings.ChargeVsetpoint * settings.Scells ) * 10));
-      msg.buf[3] = lowByte(uint16_t((settings.ChargeVsetpoint * settings.Scells ) * 10));
+      msg.data[2] = highByte(uint16_t((settings.ChargeVsetpoint * settings.Scells ) * 10));
+      msg.data[3] = lowByte(uint16_t((settings.ChargeVsetpoint * settings.Scells ) * 10));
     }
     else
     {
-      msg.buf[2] = highByte( 400);
-      msg.buf[3] = lowByte( 400);
+      msg.data[2] = highByte( 400);
+      msg.data[3] = lowByte( 400);
     }
-    msg.buf[4] = 0x00;
+    msg.data[4] = 0x00;
     if ((settings.ChargeVsetpoint * settings.Scells)*chargecurrent < 3300)
     {
-      msg.buf[5] = highByte(uint16_t(((settings.ChargeVsetpoint * settings.Scells) * chargecurrent) / 240));
-      msg.buf[6] = highByte(uint16_t(((settings.ChargeVsetpoint * settings.Scells) * chargecurrent) / 240));
+      msg.data[5] = highByte(uint16_t(((settings.ChargeVsetpoint * settings.Scells) * chargecurrent) / 240));
+      msg.data[6] = highByte(uint16_t(((settings.ChargeVsetpoint * settings.Scells) * chargecurrent) / 240));
     }
     else //15 A AC limit
     {
-      msg.buf[5] = 0x00;
-      msg.buf[6] = 0x96;
+      msg.data[5] = 0x00;
+      msg.data[6] = 0x96;
     }
-    msg.buf[7] = 0x01; //HV charging
-    Can0.write(msg);
+    msg.data[7] = 0x01; //HV charging
+    can0.write(msg);
   }
 
   if (settings.chargertype == Outlander)
   {
     msg.id = 0x285;
     msg.len = 8;
-    msg.buf[0] = 0x0;
-    msg.buf[1] = 0x0;
-    msg.buf[2] = 0xb6;
-    msg.buf[3] = 0x0;
-    msg.buf[4] = 0x0;
-    msg.buf[5] = 0x0;
-    msg.buf[6] = 0x0;
-    Can0.write(msg);
+    msg.data[0] = 0x0;
+    msg.data[1] = 0x0;
+    msg.data[2] = 0xb6;
+    msg.data[3] = 0x0;
+    msg.data[4] = 0x0;
+    msg.data[5] = 0x0;
+    msg.data[6] = 0x0;
+    can0.write(msg);
     
     msg.id  = 0x286;
     msg.len = 8;
-    msg.buf[0] = highByte(uint16_t(settings.ChargeVsetpoint * settings.Scells * 10));//voltage
-    msg.buf[1] = lowByte(uint16_t(settings.ChargeVsetpoint * settings.Scells * 10));
-    msg.buf[2] = lowByte(chargecurrent / ncharger);
-    msg.buf[3] = 0x0;
-    msg.buf[4] = 0x0;
-    msg.buf[5] = 0x0;
-    msg.buf[6] = 0x0;
-    Can0.write(msg);
+    msg.data[0] = highByte(uint16_t(settings.ChargeVsetpoint * settings.Scells * 10));//voltage
+    msg.data[1] = lowByte(uint16_t(settings.ChargeVsetpoint * settings.Scells * 10));
+    msg.data[2] = lowByte(chargecurrent / ncharger);
+    msg.data[3] = 0x0;
+    msg.data[4] = 0x0;
+    msg.data[5] = 0x0;
+    msg.data[6] = 0x0;
+    can0.write(msg);
   }
+ */
 }
 ////////END///////////
