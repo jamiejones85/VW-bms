@@ -18,36 +18,6 @@
   TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
   SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
-// This is for teensey 3.6 where 3rd/4th (Can2/Can3) Can buses are SPI based MCP2515 can, this needs to be definded before Flexcan or it will fail to compile.
-#if defined(__MK66FX1M0__) //teensy 3.6 only
-  // https://github.com/pierremolinaro/acan2515
-  
-  #include <ACAN2515.h>
-  
-  static const byte MCP2515_Can2_SCK = 27 ; // (SPI0) SCK input of MCP2515
-  static const byte MCP2515_Can2_SI  = 28 ; // (SPI0) SI input of MCP2515
-  static const byte MCP2515_Can2_SO  = 39 ; // (SPI0) SO output of MCP2515
-  static const byte MCP2515_Can2_CS  = 26 ; // (SPI0) CS input of MCP2515
-  static const byte MCP2515_Can2_INT = 29 ; // (SPI0) INT output of MCP2515
-  
-  static const byte MCP2515_Can3_SCK = 32 ; // (SPI1) SCK input of MCP2515
-  static const byte MCP2515_Can3_SI  = 0 ; // (SPI1) SI input of MCP2515
-  static const byte MCP2515_Can3_SO  = 1 ; // (SPI1) SO output of MCP2515
-  static const byte MCP2515_Can3_CS  = 31 ; // (SPI1) CS input of MCP2515
-  static const byte MCP2515_Can3_INT = 30 ; // (SPI1) INT output of MCP2515
-
-  const uint32_t QUARTZ_FREQUENCY = 16 * 1000 * 1000 ; // 16 MHz
-  
-  ACAN2515 can2 (MCP2515_Can2_CS, SPI, MCP2515_Can2_INT) ;
-  ACAN2515 can3 (MCP2515_Can3_CS, SPI1, MCP2515_Can3_INT) ;
-  // Here the bitrate for the 3rd/4th Can Buses are Hard Coded for 500kb/s, obiously change if you need to..
-  ACAN2515Settings settings2 (QUARTZ_FREQUENCY, 500 * 1000) ; // CAN bit rate 500 kb/s
-  ACAN2515Settings settings3 (QUARTZ_FREQUENCY, 500 * 1000) ; // CAN bit rate 500 kb/s
-
-  bool msgsent = false ; // here we say that a message has not been sent,see ACAN Trytosend for further information...
-
-#endif
-
 #include "BMSModuleManager.h"
 #include <Arduino.h>
 #include "config.h"
@@ -59,7 +29,6 @@
 #include <SPI.h>
 #include <Filters.h>//https://github.com/JonHub/Filters
 #include "BMSUtil.h"
-
 
 #define CPU_REBOOT (_reboot_Teensyduino_());
 
@@ -328,22 +297,10 @@ void setup()
   analogWriteFrequency(OUT7, pwmfreq);
   analogWriteFrequency(OUT8, pwmfreq);
 
-  #if defined(__MK66FX1M0__) //teensy 3.6 only
-    SPI.setMOSI (MCP2515_Can2_SI) ;
-    SPI.setMISO (MCP2515_Can2_SO) ;
-    SPI.setSCK (MCP2515_Can2_SCK) ;
-    SPI.begin () ;
-    
-    SPI1.setMOSI (MCP2515_Can3_SI) ;
-    SPI1.setMISO (MCP2515_Can3_SO) ;
-    SPI1.setSCK (MCP2515_Can3_SCK) ;
-    SPI1.begin () ;
-  #endif
-
   Can0.begin(500000);
   
   #if defined(__MK66FX1M0__) //teensy 3.6 only
-    Can1.begin(500000);// 500 kbps, 2nd battery pack    
+    Can1.begin(500000);
   #endif
 
   //set filters for standard
@@ -1670,64 +1627,6 @@ void calcur()
 
 void VEcan() //communication with Victron system over CAN
 {
-
- #if defined(__MK66FX1M0__) //teensy 3.6 only
-  // OutputtingCanbus outputs (Victron) to Can2 (1st SPI Canbus) on teensey 3.6 set ups utilising ACAN2515 library
-
-  CANMessage frame ;
-  // Can messgaes for the Victron Sytem over CAN, usefull as it can be used for a home brew display etc.
-  
-  // Brodcast on Can ID 0x351 for charge setpoint, chargecurrent, discharge current & discharv=ge voltage setpoints
-  frame.id  = 0x351;
-  if (storagemode == 0)
-  {
-    frame.data16[0] = uint16_t((settings.ChargeVsetpoint * settings.Scells ) * 10);
-  }
-  else
-  {
-    frame.data16[0] = uint16_t((settings.StoreVsetpoint * settings.Scells ) * 10);
-  }
-  frame.data16[1] = chargecurrent;
-  frame.data16[2] = discurrent ;
-  frame.data16[3] = uint16_t((settings.DischVsetpoint * settings.Scells) * 10);
-  msgsent = can2.tryToSend (frame) ;
-  if (msgsent != true) { delay (5) ;}  // if the transmit buffer is full wait 5ms (so it is clear for the next messgae), since these messages are non critical a missed frame will not be a major problem
-  
-  // Brodcast on Can ID 0x355 for State of charge, State of heath (Not Avaiable from slaves) charge setpoint, SOC x10 ? and 4th data block is blank
-  frame.id  = 0x355;
-  frame.data16[0] = SOC;
-  frame.data16[1] = SOH;
-  frame.data16[2] = SOC * 10;
-  frame.data16[3] = 0;
-  msgsent = can2.tryToSend (frame) ;
-  if (msgsent != true) { delay (5); } // if the transmit buffer is full wait 5ms (so it is clear for the next messgae), since these messages are non critical a missed frame will not be a major problem
-
-  // Brodcast on Can ID 0x356 for Pack Voltage (V..TBC), current draw (mA), Average Temperature (deg C) and 4th data block is blank
-  frame.id  = 0x356;
-  frame.data16[0] = uint16_t(bms.getPackVoltage() * 100);
-  frame.data16[1] = long(currentact / 100);
-  frame.data16[2] = int16_t(bms.getAvgTemperature() * 10);
-  frame.data16[3] = 0;
-  msgsent = can2.tryToSend (frame) ;
-  if (msgsent != true) { delay (5); } // if the transmit buffer is full wait 5ms (so it is clear for the next messgae), since these messages are non critical a missed frame will not be a major problem
-
-  // Broadcast on Can ID 0x35A warnings and alarms 
-
-  frame.id  = 0x35A;
-  frame.data[0] = alarm[0];//High temp  Low Voltage | High Voltage
-  frame.data[1] = alarm[1]; // High Discharge Current | Low Temperature
-  frame.data[2] = alarm[2]; //Internal Failure | High Charge current
-  frame.data[3] = alarm[3];// Cell Imbalance
-  frame.data[4] = warning[0];//High temp  Low Voltage | High Voltage
-  frame.data[5] = warning[1];// High Discharge Current | Low Temperature
-  frame.data[6] = warning[2];//Internal Failure | High Charge current
-  frame.data[7] = warning[3];// Cell Imbalance
-  msgsent = can2.tryToSend (frame) ;
-  if (msgsent != true) { delay (5); } // if the transmit buffer is full wait 5ms (so it is clear for the next messgae), since these messages are non critical a missed frame will not be a major problem
-
-   
-  else
-  // Original Simp BMS code
   msg.id  = 0x351;
   msg.len = 8;
   if (storagemode == 0)
@@ -1855,7 +1754,7 @@ void VEcan() //communication with Victron system over CAN
   msg.buf[6] = 0x00;
   msg.buf[7] = 0x00;
   Can0.write(msg);
-#endif
+
 }
 
 void BMVmessage()//communication with the Victron Color Control System over VEdirect
