@@ -18,11 +18,14 @@
   TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
   SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
+<<<<<<< HEAD
 
 #if defined(__MK66FX1M0__) //teensy 3.6 only
    
 #endif
 
+=======
+>>>>>>> parent of f74704f (Update VWBMSV2.ino)
 #include "BMSModuleManager.h"
 #include <Arduino.h>
 #include "config.h"
@@ -36,7 +39,6 @@
 #include <SPI.h>
 #include <Filters.h>//https://github.com/JonHub/Filters
 #include "BMSUtil.h"
-
 
 #define CPU_REBOOT (_reboot_Teensyduino_());
 
@@ -345,6 +347,7 @@ void setup()
   analogWriteFrequency(OUT7, pwmfreq);
   analogWriteFrequency(OUT8, pwmfreq);
 
+<<<<<<< HEAD
 
 /////////////////////////////////////////////////////////////////////////
 //        setup & start Can buses
@@ -393,6 +396,13 @@ void setup()
       Serial.print ("can3 ACAN2515 configuration error 0x") ;
       Serial.println (errorCode2515_3, HEX) ;
       }
+=======
+  Can0.begin(500000);
+  
+  #if defined(__MK66FX1M0__) //teensy 3.6 only
+    Can1.begin(500000);
+  #endif
+>>>>>>> parent of f74704f (Update VWBMSV2.ino)
 
     ACAN2515Settings settings2515_4 (QUARTZ_FREQUENCY, can4_BIT_RATE) ;
     const uint32_t errorCode2515_4 = can4.begin (settings2515_4, [] { can4.isr () ; }) ;
@@ -1749,6 +1759,7 @@ void calcur()
 }
 
 void VEcan() //communication with Victron system over CAN
+<<<<<<< HEAD
 { 
 
     // Code modified to use ACAN2515 / ACAN
@@ -1900,6 +1911,136 @@ void VEcan() //communication with Victron system over CAN
     if (CAN_OUT == 4) {can4.tryToSend (message) ;}
       
 
+=======
+{
+  msg.id  = 0x351;
+  msg.len = 8;
+  if (storagemode == 0)
+  {
+    msg.buf[0] = lowByte(uint16_t((settings.ChargeVsetpoint * settings.Scells ) * 10));
+    msg.buf[1] = highByte(uint16_t((settings.ChargeVsetpoint * settings.Scells ) * 10));
+  }
+  else
+  {
+    msg.buf[0] = lowByte(uint16_t((settings.StoreVsetpoint * settings.Scells ) * 10));
+    msg.buf[1] = highByte(uint16_t((settings.StoreVsetpoint * settings.Scells ) * 10));
+  }
+  msg.buf[2] = lowByte(chargecurrent);
+  msg.buf[3] = highByte(chargecurrent);
+  msg.buf[4] = lowByte(discurrent );
+  msg.buf[5] = highByte(discurrent);
+  msg.buf[6] = lowByte(uint16_t((settings.DischVsetpoint * settings.Scells) * 10));
+  msg.buf[7] = highByte(uint16_t((settings.DischVsetpoint * settings.Scells) * 10));
+  Can0.write(msg);
+
+  msg.id  = 0x355;
+  msg.len = 8;
+  msg.buf[0] = lowByte(SOC);
+  msg.buf[1] = highByte(SOC);
+  msg.buf[2] = lowByte(SOH);
+  msg.buf[3] = highByte(SOH);
+  msg.buf[4] = lowByte(SOC * 10);
+  msg.buf[5] = highByte(SOC * 10);
+  msg.buf[6] = 0;
+  msg.buf[7] = 0;
+  Can0.write(msg);
+
+  msg.id  = 0x356;
+  msg.len = 8;
+  msg.buf[0] = lowByte(uint16_t(bms.getPackVoltage() * 100));
+  msg.buf[1] = highByte(uint16_t(bms.getPackVoltage() * 100));
+  msg.buf[2] = lowByte(long(currentact / 100));
+  msg.buf[3] = highByte(long(currentact / 100));
+  msg.buf[4] = lowByte(int16_t(bms.getAvgTemperature() * 10));
+  msg.buf[5] = highByte(int16_t(bms.getAvgTemperature() * 10));
+  msg.buf[6] = 0;
+  msg.buf[7] = 0;
+  Can0.write(msg);
+
+  delay(2);
+  msg.id  = 0x35A;
+  msg.len = 8;
+  msg.buf[0] = alarm[0];//High temp  Low Voltage | High Voltage
+  msg.buf[1] = alarm[1]; // High Discharge Current | Low Temperature
+  msg.buf[2] = alarm[2]; //Internal Failure | High Charge current
+  msg.buf[3] = alarm[3];// Cell Imbalance
+  msg.buf[4] = warning[0];//High temp  Low Voltage | High Voltage
+  msg.buf[5] = warning[1];// High Discharge Current | Low Temperature
+  msg.buf[6] = warning[2];//Internal Failure | High Charge current
+  msg.buf[7] = warning[3];// Cell Imbalance
+  Can0.write(msg);
+
+  msg.id  = 0x35E;
+  msg.len = 8;
+  msg.buf[0] = bmsname[0];
+  msg.buf[1] = bmsname[1];
+  msg.buf[2] = bmsname[2];
+  msg.buf[3] = bmsname[3];
+  msg.buf[4] = bmsname[4];
+  msg.buf[5] = bmsname[5];
+  msg.buf[6] = bmsname[6];
+  msg.buf[7] = bmsname[7];
+  Can0.write(msg);
+
+  delay(2);
+  msg.id  = 0x370;
+  msg.len = 8;
+  msg.buf[0] = bmsmanu[0];
+  msg.buf[1] = bmsmanu[1];
+  msg.buf[2] = bmsmanu[2];
+  msg.buf[3] = bmsmanu[3];
+  msg.buf[4] = bmsmanu[4];
+  msg.buf[5] = bmsmanu[5];
+  msg.buf[6] = bmsmanu[6];
+  msg.buf[7] = bmsmanu[7];
+  Can0.write(msg);
+
+  delay(2);
+  msg.id  = 0x373;
+  msg.len = 8;
+  msg.buf[0] = lowByte(uint16_t(bms.getLowCellVolt() * 1000));
+  msg.buf[1] = highByte(uint16_t(bms.getLowCellVolt() * 1000));
+  msg.buf[2] = lowByte(uint16_t(bms.getHighCellVolt() * 1000));
+  msg.buf[3] = highByte(uint16_t(bms.getHighCellVolt() * 1000));
+  msg.buf[4] = lowByte(uint16_t(bms.getLowTemperature() + 273.15));
+  msg.buf[5] = highByte(uint16_t(bms.getLowTemperature() + 273.15));
+  msg.buf[6] = lowByte(uint16_t(bms.getHighTemperature() + 273.15));
+  msg.buf[7] = highByte(uint16_t(bms.getHighTemperature() + 273.15));
+  Can0.write(msg);
+
+  delay(2);
+  msg.id  = 0x379; //Installed capacity
+  msg.len = 2;
+  msg.buf[0] = lowByte(uint16_t(settings.Pstrings * settings.CAP));
+  msg.buf[1] = highByte(uint16_t(settings.Pstrings * settings.CAP));
+  /*
+      delay(2);
+    msg.id  = 0x378; //Installed capacity
+    msg.len = 2;
+    //energy in 100wh/unit
+    msg.buf[0] =
+    msg.buf[1] =
+    msg.buf[2] =
+    msg.buf[3] =
+    //energy out 100wh/unit
+    msg.buf[4] =
+    msg.buf[5] =
+    msg.buf[6] =
+    msg.buf[7] =
+  */
+  delay(2);
+  msg.id  = 0x372;
+  msg.len = 8;
+  msg.buf[0] = lowByte(bms.getNumModules());
+  msg.buf[1] = highByte(bms.getNumModules());
+  msg.buf[2] = 0x00;
+  msg.buf[3] = 0x00;
+  msg.buf[4] = 0x00;
+  msg.buf[5] = 0x00;
+  msg.buf[6] = 0x00;
+  msg.buf[7] = 0x00;
+  Can0.write(msg);
+>>>>>>> parent of f74704f (Update VWBMSV2.ino)
 
 }
 
