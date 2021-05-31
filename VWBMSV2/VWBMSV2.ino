@@ -95,6 +95,7 @@ byte bmsstatus = 0;
 #define Elcon 4
 #define Victron 5
 #define Coda 6
+#define Outlander 8
 //
 
 int Discharge;
@@ -775,6 +776,9 @@ if (settings.ESSmode == 1)
           }
           if (digitalRead(IN3) == LOW)//detect AC not present for charging
           {
+            //send a 0 amp request to outlander
+            chargecurrent = 0;
+            chargercomms();
             bmsstatus = Ready;
           }
           break;
@@ -2177,7 +2181,7 @@ void menu()
 
       case '5': //1 Over Voltage Setpoint
         settings.chargertype = settings.chargertype + 1;
-        if (settings.chargertype > 7)
+        if (settings.chargertype > 8)
         {
           settings.chargertype = 0;
         }
@@ -2599,6 +2603,9 @@ void menu()
             break;
           case 7:
             SERIALCONSOLE.print("Eltek PC Charger");
+            break;
+          case 8:
+            SERIALCONSOLE.print("Mitsubish Outlander Charger");
             break;
         }
         SERIALCONSOLE.println();
@@ -3742,6 +3749,32 @@ void chargercomms()
       msg.buf[6] = 0x96;
     }
     msg.buf[7] = 0x01; //HV charging
+    Can0.write(msg);
+  }
+
+  if (settings.chargertype == Outlander)
+  {
+
+    msg.id = 0x285;
+    msg.len = 8;
+    msg.buf[0] = 0x0;
+    msg.buf[1] = 0x0;
+    msg.buf[2] = 0xb6;
+    msg.buf[3] = 0x0;
+    msg.buf[4] = 0x0;
+    msg.buf[5] = 0x0;
+    msg.buf[6] = 0x0;
+    Can0.write(msg);
+    
+    msg.id  = 0x286;
+    msg.len = 8;
+    msg.buf[0] = highByte(uint16_t(settings.ChargeVsetpoint * settings.Scells * 10));//volage
+    msg.buf[1] = lowByte(uint16_t(settings.ChargeVsetpoint * settings.Scells * 10));
+    msg.buf[2] = lowByte(chargecurrent / ncharger);
+    msg.buf[3] = 0x0;
+    msg.buf[4] = 0x0;
+    msg.buf[5] = 0x0;
+    msg.buf[6] = 0x0;
     Can0.write(msg);
   }
 }
