@@ -72,7 +72,7 @@ void BMSModuleManager::clearmodules()
   }
 }
 
-void BMSModuleManager::decodetemp(CAN_message_t &msg, int debug)
+void BMSModuleManager::decodetemp(BMS_CAN_MESSAGE &msg, int debug)
 {
   int CMU = (msg.id & 0xFF);
   if (debug == 1)
@@ -110,7 +110,7 @@ void BMSModuleManager::decodetemp(CAN_message_t &msg, int debug)
   }
 }
 
-void BMSModuleManager::decodecan(CAN_message_t &msg, int debug)
+void BMSModuleManager::decodecan(BMS_CAN_MESSAGE &msg, int debug)
 {
   int CMU, Id = 0;
   switch (msg.id)

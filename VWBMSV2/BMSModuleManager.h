@@ -1,7 +1,7 @@
 #pragma once
 #include "config.h"
 #include "BMSModule.h"
-#include <FlexCAN.h>
+#include "BMSCan.h"
 
 class BMSModuleManager
 {
@@ -9,8 +9,8 @@ class BMSModuleManager
     BMSModuleManager();
     int seriescells();
     void clearmodules();
-    void decodecan(CAN_message_t &msg, int debug);
-    void decodetemp(CAN_message_t &msg, int debug);
+    void decodecan(BMS_CAN_MESSAGE &msg, int debug);
+    void decodetemp(BMS_CAN_MESSAGE &msg, int debug);
     void getAllVoltTemp();
     void readSetpoints();
     void setBatteryID(int id);

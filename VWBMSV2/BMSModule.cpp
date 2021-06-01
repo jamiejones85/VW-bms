@@ -40,7 +40,7 @@ void BMSModule::clearmodule()
   moduleAddress = 0;
 }
 
-void BMSModule::decodetemp(CAN_message_t &msg)
+void BMSModule::decodetemp(BMS_CAN_MESSAGE &msg)
 {
   if (msg.buf[7] == 0xFD)
   {
@@ -71,7 +71,7 @@ void BMSModule::decodetemp(CAN_message_t &msg)
   }
 }
 
-void BMSModule::decodecan(int Id, CAN_message_t &msg)
+void BMSModule::decodecan(int Id, BMS_CAN_MESSAGE &msg)
 {
   switch (Id)
   {

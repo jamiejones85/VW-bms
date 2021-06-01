@@ -1,12 +1,12 @@
 #pragma once
-#include <FlexCAN.h>
+#include "BMSCan.h"
 
 class BMSModule
 {
   public:
     BMSModule();
-    void decodecan(int Id, CAN_message_t &msg);
-    void decodetemp(CAN_message_t &msg);
+    void decodecan(int Id, BMS_CAN_MESSAGE &msg);
+    void decodetemp(BMS_CAN_MESSAGE &msg);
     void clearmodule();
     int getscells();
     float getCellVoltage(int cell);
