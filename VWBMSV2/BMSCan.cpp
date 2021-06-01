@@ -38,8 +38,7 @@ uint32_t BMSCan::available (void) {
   return ACAN::can0.available();
 }
 void BMSCan::begin(uint32_t baud) {
-   ACANSettings settings(baud) ; // 125 kbit/s
-   settings.mConfiguration = ACANSettings::k10_6_Filters;
+   ACANSettings settings(baud);
    ACAN::can0.begin(settings);
 }
 
