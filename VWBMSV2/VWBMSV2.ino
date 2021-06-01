@@ -77,6 +77,8 @@ byte bmsstatus = 0;
 #define Analoguedual 1
 #define Canbus 2
 #define Analoguesing 3
+#define TeslaSPI 4
+#define TeslaSPICS 36
 //
 
 // Can current sensor values
@@ -234,7 +236,7 @@ void loadSettings()
   settings.socvolt[3] = 90; //Voltage and SOC curve for voltage based SOC calc
   settings.invertcur = 0; //Invert current sensor direction
   settings.cursens = 2;
-   settings.curcan = LemCAB300;
+  settings.curcan = LemCAB300;
   settings.voltsoc = 0; //SOC purely voltage based
   settings.Pretime = 5000; //ms of precharge time
   settings.conthold = 50; //holding duty cycle for contactor 0-255
@@ -385,6 +387,25 @@ void setup()
   Pretimer1  = millis();
 
   cleartime = millis();
+}
+
+float readTeslaSPI() {
+  int buff[18];
+  SPI.beginTransaction(SPISettings(500000, MSBFIRST, SPI_MODE0));
+  digitalWrite(TeslaSPICS, LOW);
+  // send the device the register you want to read:
+  buff[0] = SPI.transfer(0x41);
+  for (int I = 1; I < 7; I++)
+  {
+    buff[I] = SPI.transfer(0x00);
+  }
+  buff[8] = SPI.transfer(0x9A);
+  digitalWrite(TeslaSPICS, HIGH);
+  SPI.endTransaction();
+  int32_t current = ((int32_t(buff[6]*256+buff[5])*256+buff[4])*256+buff[3]) ;
+  SERIALCONSOLE.print("Tesla Shunt: ");
+  SERIALCONSOLE.println(current);
+  return 1.0f;
 }
 
 void loop()
@@ -797,6 +818,11 @@ if (settings.ESSmode == 1)
     if ( settings.cursens == Analoguedual || settings.cursens == Analoguesing)
     {
       getcurrent();
+    }
+    if (settings.cursens == TeslaSPI) 
+    {
+      RawCur = readTeslaSPI();
+      //getcurrent();
     }
   }
 
@@ -1983,7 +2009,7 @@ void menu()
 
       case 115: //s for switch sensor
         settings.cursens ++;
-        if (settings.cursens > 3)
+        if (settings.cursens > 4)
         {
           settings.cursens = 0;
         }
@@ -2759,6 +2785,9 @@ void menu()
             break;
           case Canbus:
             SERIALCONSOLE.println(" Canbus Current Sensor ");
+            break;
+          case TeslaSPI:
+            SERIALCONSOLE.println("  TESLA SPI Current Sensor ");
             break;
           default:
             SERIALCONSOLE.println("Undefined");
