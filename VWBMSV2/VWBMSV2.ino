@@ -3593,7 +3593,7 @@ void chargercomms()
   {
     msg.id  =  0x1806E5F4; //broadcast to all Elteks
     msg.len = 8;
-    msg.ext = 1;
+    msg.flags.extended = 1;
     msg.buf[0] = highByte(uint16_t(settings.ChargeVsetpoint * settings.Scells * 10));
     msg.buf[1] = lowByte(uint16_t(settings.ChargeVsetpoint * settings.Scells * 10));
     msg.buf[2] = highByte(chargecurrent / ncharger);
@@ -3604,7 +3604,7 @@ void chargercomms()
     msg.buf[7] = 0x00;
 
     bmscan.write(msg);
-    msg.ext = 0;
+    msg.flags.extended = 0;
   }
 
   if (settings.chargertype == Eltek)

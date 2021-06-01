@@ -1,6 +1,6 @@
 #pragma once
-#include <FlexCAN.h> //https://github.com/collin80/FlexCAN_Library
 #include <Filters.h>//https://github.com/JonHub/Filters
+#include <ACAN.h>
 
 typedef struct BMS_CAN_MESSAGE {
     uint32_t id;
@@ -25,7 +25,7 @@ class BMSCan
      int read (BMS_CAN_MESSAGE &msg);
      
   private:
-     CAN_message_t convert(const BMS_CAN_MESSAGE &msg);
-     BMS_CAN_MESSAGE convert(const CAN_message_t &msg);
+     CANMessage convert(const BMS_CAN_MESSAGE &msg);
+     BMS_CAN_MESSAGE convert(const CANMessage &msg);
 
 };

@@ -1,63 +1,49 @@
 #include <Arduino.h>
 #include "BMSCan.h"
-#include <FlexCAN.h> //https://github.com/collin80/FlexCAN_Library
+#include <ACAN.h>
 
-CAN_message_t BMSCan::convert(const BMS_CAN_MESSAGE &msg) {
-  CAN_message_t ret;
+CANMessage BMSCan::convert(const BMS_CAN_MESSAGE &msg) {
+  CANMessage ret;
 
   ret.id = msg.id;
   ret.len = msg.len;
+  ret.ext = msg.flags.extended;
 
   for(int i = 0; i < msg.len; i++) {
-    ret.buf[i] = msg.buf[i];
+    ret.data[i] = msg.buf[i];
   }
   return ret;
 }
 
-BMS_CAN_MESSAGE BMSCan::convert(const CAN_message_t &msg) {
+BMS_CAN_MESSAGE BMSCan::convert(const CANMessage &msg) {
   BMS_CAN_MESSAGE ret;
 
   ret.id = msg.id;
   ret.len = msg.len;
-
+  ret.flags.extended = msg.ext;
   for(int i = 0; i < msg.len; i++) {
-    ret.buf[i] = msg.buf[i];
+    ret.buf[i] = msg.data[i];
   }
   return ret;
 }
 
 int BMSCan::read (BMS_CAN_MESSAGE &msg) {
-  CAN_message_t readMesg;
-  int response = Can0.read(readMesg);
+  CANMessage readMesg;
+  int response = ACAN::can0.receive(readMesg);
   msg = convert(readMesg);
   return response;
 }
 
 uint32_t BMSCan::available (void) {
-  return Can0.available();
+  return ACAN::can0.available();
 }
 void BMSCan::begin(uint32_t baud) {
-   Can0.begin(baud);
-   
-   CAN_filter_t filter;
-
-     //set filters for standard
-  for (int i = 0; i < 8; i++)
-  {
-    //Can0.getFilter(filter, i);
-    filter.flags.extended = 0;
-    Can0.setFilter(filter, i);
-  }
-  //set filters for extended
-  for (int i = 9; i < 13; i++)
-  {
-    //Can0.getFilter(filter, i);
-    filter.flags.extended = 1;
-    Can0.setFilter(filter, i);
-  }
+   ACANSettings settings(baud) ; // 125 kbit/s
+   settings.mConfiguration = ACANSettings::k10_6_Filters;
+   ACAN::can0.begin(settings);
 }
 
 int BMSCan::write(const BMS_CAN_MESSAGE &msg) {
-    CAN_message_t ret = convert(msg);
-    return Can0.write(ret);
+    CANMessage toSend = convert(msg);
+    return ACAN::can0.tryToSend(toSend);
 }
