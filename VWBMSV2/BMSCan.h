@@ -28,10 +28,10 @@ typedef struct BMS_CAN_MESSAGE {
 class BMSCan
 {
   public:
-     int write(const BMS_CAN_MESSAGE &msg);
-     void begin(uint32_t baud);
-     uint32_t available (void);
-     int read (BMS_CAN_MESSAGE &msg);
+     int write(const BMS_CAN_MESSAGE &msg, int interfaceIndex);
+     void begin(uint32_t baud, int interfaceIndex);
+     uint32_t available (int interfaceIndex);
+     int read (BMS_CAN_MESSAGE &msg, int interfaceIndex);
      
   private:
      CANMessage convert(const BMS_CAN_MESSAGE &msg);

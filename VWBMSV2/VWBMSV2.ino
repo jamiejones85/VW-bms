@@ -304,7 +304,7 @@ void setup()
   SPI.setSCK (MCP2515_SCK) ;
   SPI.begin () ;
   
-  bmscan.begin(500000);
+  bmscan.begin(500000, 2);
 
   //if using enable pins on a transceiver they need to be set on
 
@@ -415,7 +415,7 @@ float readTeslaSPI() {
 
 void loop()
 {
-  while (bmscan.available())
+  while (bmscan.available(2))
   {
     canread();
   }
@@ -1649,7 +1649,7 @@ void VEcan() //communication with Victron system over CAN
   msg.buf[6] = lowByte(uint16_t((settings.DischVsetpoint * settings.Scells) * 10));
   msg.buf[7] = highByte(uint16_t((settings.DischVsetpoint * settings.Scells) * 10));
 
-  bmscan.write(msg);
+  bmscan.write(msg, 2);
 
   msg.id  = 0x355;
   msg.len = 8;
@@ -1661,7 +1661,7 @@ void VEcan() //communication with Victron system over CAN
   msg.buf[5] = highByte(SOC * 10);
   msg.buf[6] = 0;
   msg.buf[7] = 0;
-  bmscan.write(msg);
+  bmscan.write(msg, 2);
 
   msg.id  = 0x356;
   msg.len = 8;
@@ -1673,7 +1673,7 @@ void VEcan() //communication with Victron system over CAN
   msg.buf[5] = highByte(int16_t(bms.getAvgTemperature() * 10));
   msg.buf[6] = 0;
   msg.buf[7] = 0;
-  bmscan.write(msg);
+  bmscan.write(msg, 2);
 
   delay(2);
   msg.id  = 0x35A;
@@ -1686,7 +1686,7 @@ void VEcan() //communication with Victron system over CAN
   msg.buf[5] = warning[1];// High Discharge Current | Low Temperature
   msg.buf[6] = warning[2];//Internal Failure | High Charge current
   msg.buf[7] = warning[3];// Cell Imbalance
-  bmscan.write(msg);
+  bmscan.write(msg, 2);
 
   msg.id  = 0x35E;
   msg.len = 8;
@@ -1698,7 +1698,7 @@ void VEcan() //communication with Victron system over CAN
   msg.buf[5] = bmsname[5];
   msg.buf[6] = bmsname[6];
   msg.buf[7] = bmsname[7];
-  bmscan.write(msg);
+  bmscan.write(msg, 2);
 
   delay(2);
   msg.id  = 0x370;
@@ -1711,7 +1711,7 @@ void VEcan() //communication with Victron system over CAN
   msg.buf[5] = bmsmanu[5];
   msg.buf[6] = bmsmanu[6];
   msg.buf[7] = bmsmanu[7];
-  bmscan.write(msg);
+  bmscan.write(msg, 2);
 
   delay(2);
   msg.id  = 0x373;
@@ -1724,7 +1724,7 @@ void VEcan() //communication with Victron system over CAN
   msg.buf[5] = highByte(uint16_t(bms.getLowTemperature() + 273.15));
   msg.buf[6] = lowByte(uint16_t(bms.getHighTemperature() + 273.15));
   msg.buf[7] = highByte(uint16_t(bms.getHighTemperature() + 273.15));
-  bmscan.write(msg);
+  bmscan.write(msg, 2);
 
   delay(2);
   msg.id  = 0x379; //Installed capacity
@@ -1757,7 +1757,7 @@ void VEcan() //communication with Victron system over CAN
   msg.buf[5] = 0x00;
   msg.buf[6] = 0x00;
   msg.buf[7] = 0x00;
-  bmscan.write(msg);
+  bmscan.write(msg, 2);
 
 }
 
@@ -2975,7 +2975,7 @@ void menu()
 
 void canread()
 {
-  bmscan.read(inMsg);
+  bmscan.read(inMsg, 2);
   // Read data: len = data length, buf = data byte(s)
   if ( settings.cursens == Canbus)
   {
@@ -3356,7 +3356,7 @@ void sendcommand()
   msg.buf[5] = 0x00;
   msg.buf[6] = 0x00;
   msg.buf[7] = 0x00;
-  bmscan.write(msg);
+  bmscan.write(msg, 2);
   delay(1);
   msg.id  = controlid;
   msg.len = 8;
@@ -3368,7 +3368,7 @@ void sendcommand()
   msg.buf[5] = 0x00;
   msg.buf[6] = 0x00;
   msg.buf[7] = 0x30;
-  bmscan.write(msg);
+  bmscan.write(msg, 2);
 }
 
 void resetwdog()
@@ -3637,7 +3637,7 @@ void chargercomms()
     msg.buf[6] = 0x00;
     msg.buf[7] = 0x00;
 
-    bmscan.write(msg);
+    bmscan.write(msg, 2);
     msg.flags.extended = 0;
   }
 
@@ -3653,7 +3653,7 @@ void chargercomms()
     msg.buf[5] = lowByte(chargecurrent / ncharger);
     msg.buf[6] = highByte(chargecurrent / ncharger);
 
-    bmscan.write(msg);
+    bmscan.write(msg, 2);
   }
   if (settings.chargertype == BrusaNLG5)
   {
@@ -3686,7 +3686,7 @@ void chargercomms()
     msg.buf[6] = lowByte(chargecurrent / ncharger);
     msg.buf[3] = highByte(uint16_t(((settings.ChargeVsetpoint * settings.Scells ) - chargerendbulk) * 10));
     msg.buf[4] = lowByte(uint16_t(((settings.ChargeVsetpoint * settings.Scells ) - chargerendbulk)  * 10));
-    bmscan.write(msg);
+    bmscan.write(msg, 2);
 
     delay(2);
 
@@ -3707,7 +3707,7 @@ void chargercomms()
     msg.buf[4] = lowByte(uint16_t(((settings.ChargeVsetpoint * settings.Scells ) - chargerend) * 10));
     msg.buf[5] = highByte(chargecurrent / ncharger);
     msg.buf[6] = lowByte(chargecurrent / ncharger);
-    bmscan.write(msg);
+    bmscan.write(msg, 2);
 
   }
   if (settings.chargertype == ChevyVolt)
@@ -3715,7 +3715,7 @@ void chargercomms()
     msg.id  = 0x30E;
     msg.len = 1;
     msg.buf[0] = 0x02; //only HV charging , 0x03 hv and 12V charging
-    bmscan.write(msg);
+    bmscan.write(msg, 2);
 
 
     msg.id  = 0x304;
@@ -3739,7 +3739,7 @@ void chargercomms()
       msg.buf[2] = highByte( 400);
       msg.buf[3] = lowByte( 400);
     }
-    bmscan.write(msg);
+    bmscan.write(msg, 2);
 
   }
 
@@ -3771,7 +3771,7 @@ void chargercomms()
       msg.buf[6] = 0x96;
     }
     msg.buf[7] = 0x01; //HV charging
-    bmscan.write(msg);
+    bmscan.write(msg, 2);
 
   }
 
@@ -3787,7 +3787,7 @@ void chargercomms()
     msg.buf[4] = 0x0;
     msg.buf[5] = 0x0;
     msg.buf[6] = 0x0;
-    bmscan.write(msg);
+    bmscan.write(msg, 2);
 
     
     msg.id  = 0x286;
@@ -3799,7 +3799,7 @@ void chargercomms()
     msg.buf[4] = 0x0;
     msg.buf[5] = 0x0;
     msg.buf[6] = 0x0;
-    bmscan.write(msg);
+    bmscan.write(msg, 2);
   }
 }
 
