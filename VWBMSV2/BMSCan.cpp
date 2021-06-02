@@ -43,10 +43,12 @@ uint32_t BMSCan::available (void) {
 void BMSCan::begin(uint32_t baud) {
    can3 = new ACAN2515 (MCP2515_CS, SPI, MCP2515_INT) ;
    ACAN2515Settings settings(16 * 1000 * 1000, baud);
-   can3->begin(settings, [] { can3->isr () ; });
+   uint16_t result = can3->begin(settings, [] { can3->isr () ; });
+
 }
 
 int BMSCan::write(const BMS_CAN_MESSAGE &msg) {
     CANMessage toSend = convert(msg);
-    return can3->tryToSend(toSend);
+    bool result = can3->tryToSend(toSend);
+    return result;
 }

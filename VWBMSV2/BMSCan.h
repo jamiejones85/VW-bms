@@ -4,7 +4,7 @@
 #include <ACAN2515.h>
 #include <SPI.h>
 
-static const byte MCP2515_SCK = 32 ; // SCK input of MCP2515
+static const byte MCP2515_SCK = 27 ; // SCK input of MCP2515
 static const byte MCP2515_SI  = 28 ; // SI input of MCP2515
 static const byte MCP2515_SO  = 39 ; // SO output of MCP2515
 
