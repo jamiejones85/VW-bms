@@ -1,6 +1,15 @@
 #pragma once
 #include <Filters.h>//https://github.com/JonHub/Filters
 #include <ACAN.h>
+#include <ACAN2515.h>
+#include <SPI.h>
+
+static const byte MCP2515_SCK = 32 ; // SCK input of MCP2515
+static const byte MCP2515_SI  = 28 ; // SI input of MCP2515
+static const byte MCP2515_SO  = 39 ; // SO output of MCP2515
+
+static const byte MCP2515_CS  = 26 ; // CS input of MCP2515
+static const byte MCP2515_INT = 29 ; // INT output of MCP2515
 
 typedef struct BMS_CAN_MESSAGE {
     uint32_t id;
@@ -20,12 +29,12 @@ class BMSCan
 {
   public:
      int write(const BMS_CAN_MESSAGE &msg);
-     void BMSCan::begin(uint32_t baud);
+     void begin(uint32_t baud);
      uint32_t available (void);
      int read (BMS_CAN_MESSAGE &msg);
      
   private:
      CANMessage convert(const BMS_CAN_MESSAGE &msg);
      BMS_CAN_MESSAGE convert(const CANMessage &msg);
-
+     
 };

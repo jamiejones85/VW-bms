@@ -299,6 +299,11 @@ void setup()
   analogWriteFrequency(OUT7, pwmfreq);
   analogWriteFrequency(OUT8, pwmfreq);
 
+  SPI.setMOSI (MCP2515_SI) ;
+  SPI.setMISO (MCP2515_SO) ;
+  SPI.setSCK (MCP2515_SCK) ;
+  SPI.begin () ;
+  
   bmscan.begin(500000);
 
   //if using enable pins on a transceiver they need to be set on
