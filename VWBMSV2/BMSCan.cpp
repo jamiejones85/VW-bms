@@ -73,7 +73,7 @@ void BMSCan::begin(uint32_t baud, int interfaceIndex) {
    ACAN2515Settings settings(16 * 1000 * 1000, baud);
    can2->begin(settings, [] { can2->isr () ; });
   } else if (interfaceIndex == 3) {
-   can3 = new ACAN2515 (MCP2515_CS, SPI, MCP2515_INT) ;
+   can3 = new ACAN2515 (MCP2515_CS_2, SPI1, MCP2515_INT_2) ;
    ACAN2515Settings settings(16 * 1000 * 1000, baud);
    can3->begin(settings, [] { can3->isr () ; });
   }

@@ -303,6 +303,11 @@ void setup()
   SPI.setMISO (MCP2515_SO) ;
   SPI.setSCK (MCP2515_SCK) ;
   SPI.begin () ;
+
+  SPI1.setMOSI (MCP2515_SI_2) ;
+  SPI1.setMISO (MCP2515_SO_2) ;
+  SPI1.setSCK (MCP2515_SCK_2) ;
+  SPI1.begin () ;
   
   bmscan.begin(500000, 2);
 

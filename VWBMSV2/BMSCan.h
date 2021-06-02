@@ -7,9 +7,15 @@
 static const byte MCP2515_SCK = 27 ; // SCK input of MCP2515
 static const byte MCP2515_SI  = 28 ; // SI input of MCP2515
 static const byte MCP2515_SO  = 39 ; // SO output of MCP2515
-
 static const byte MCP2515_CS  = 26 ; // CS input of MCP2515
 static const byte MCP2515_INT = 29 ; // INT output of MCP2515
+
+static const byte MCP2515_SCK_2 = 32 ; // SCK input of MCP2515
+static const byte MCP2515_SI_2  = 0 ; // SI input of MCP2515
+static const byte MCP2515_SO_2  = 1 ; // SO output of MCP2515
+static const byte MCP2515_CS_2  = 30 ; // CS input of MCP2515
+static const byte MCP2515_INT_2 = 29 ; // INT output of MCP2515
+
 
 typedef struct BMS_CAN_MESSAGE {
     uint32_t id;
