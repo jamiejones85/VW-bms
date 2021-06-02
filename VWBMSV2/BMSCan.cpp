@@ -5,6 +5,7 @@
 
 ACAN2515* can2;
 ACAN2515* can3;
+bool started[] = {false, false, false, false};
      
 CANMessage BMSCan::convert(const BMS_CAN_MESSAGE &msg) {
   CANMessage ret;
@@ -62,20 +63,24 @@ uint32_t BMSCan::available (int interfaceIndex) {
 }
 void BMSCan::begin(uint32_t baud, int interfaceIndex) {
    
-  if (interfaceIndex == 0) {
+  if (interfaceIndex == 0 && !started[interfaceIndex]) {
     ACANSettings settings(baud);
     ACAN::can0.begin(settings);
-  } else if (interfaceIndex == 1) {
+    started[interfaceIndex] = true;
+  } else if (interfaceIndex == 1 && !started[interfaceIndex]) {
     ACANSettings settings(baud);
     ACAN::can1.begin(settings);
-  } else if (interfaceIndex == 2) {
+    started[interfaceIndex] = true;
+  } else if (interfaceIndex == 2 && !started[interfaceIndex]) {
    can2 = new ACAN2515 (MCP2515_CS, SPI, MCP2515_INT) ;
    ACAN2515Settings settings(16 * 1000 * 1000, baud);
    can2->begin(settings, [] { can2->isr () ; });
-  } else if (interfaceIndex == 3) {
+   started[interfaceIndex] = true;
+  } else if (interfaceIndex == 3 && !started[interfaceIndex]) {
    can3 = new ACAN2515 (MCP2515_CS_2, SPI1, MCP2515_INT_2) ;
    ACAN2515Settings settings(16 * 1000 * 1000, baud);
    can3->begin(settings, [] { can3->isr () ; });
+   started[interfaceIndex] = true;
   }
 
 }
@@ -86,10 +91,10 @@ int BMSCan::write(const BMS_CAN_MESSAGE &msg, int interfaceIndex) {
   if (interfaceIndex == 0) {
     ACAN::can0.tryToSend(toSend);
   } else if (interfaceIndex == 1) {
-    ACAN::can1.tryToSend(toSend);
-  } else if (interfaceIndex == 2) {
+    ACAN::can1.tryToSend(toSend); 
+  } else if (interfaceIndex == 2 && can2 != NULL) {
     can2->tryToSend(toSend);
-  } else if (interfaceIndex == 3) {
+  } else if (interfaceIndex == 3 && can3 != NULL) {
     can3->tryToSend(toSend);
   }
   return 0;

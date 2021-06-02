@@ -98,4 +98,5 @@ typedef struct {
   int16_t chargecurrentcold;
   int curcan;
   int chargerCanIndex;
+  int veCanIndex;
 } EEPROMSettings;

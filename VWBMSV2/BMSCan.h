@@ -13,8 +13,8 @@ static const byte MCP2515_INT = 29 ; // INT output of MCP2515
 static const byte MCP2515_SCK_2 = 32 ; // SCK input of MCP2515
 static const byte MCP2515_SI_2  = 0 ; // SI input of MCP2515
 static const byte MCP2515_SO_2  = 1 ; // SO output of MCP2515
-static const byte MCP2515_CS_2  = 30 ; // CS input of MCP2515
-static const byte MCP2515_INT_2 = 29 ; // INT output of MCP2515
+static const byte MCP2515_CS_2  = 31 ; // CS input of MCP2515
+static const byte MCP2515_INT_2 = 30 ; // INT output of MCP2515
 
 
 typedef struct BMS_CAN_MESSAGE {
@@ -38,7 +38,6 @@ class BMSCan
      void begin(uint32_t baud, int interfaceIndex);
      uint32_t available (int interfaceIndex);
      int read (BMS_CAN_MESSAGE &msg, int interfaceIndex);
-     
   private:
      CANMessage convert(const BMS_CAN_MESSAGE &msg);
      BMS_CAN_MESSAGE convert(const CANMessage &msg);

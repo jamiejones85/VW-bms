@@ -30,6 +30,7 @@
 #include "BMSCan.h"
 
 #define CPU_REBOOT (_reboot_Teensyduino_());
+#define DEAFULT_CAN_INTERFACE_INDEX 1
 
 BMSModuleManager bms;
 SerialConsole console;
@@ -37,7 +38,7 @@ EEPROMSettings settings;
 
 
 /////Version Identifier/////////
-int firmver = 280408;
+int firmver = 280409;
 
 //Curent filter//
 float filterFrequency = 5.0 ;
@@ -236,7 +237,8 @@ void loadSettings()
   settings.socvolt[3] = 90; //Voltage and SOC curve for voltage based SOC calc
   settings.invertcur = 0; //Invert current sensor direction
   settings.cursens = 2;
-  settings.chargerCanIndex = 0; //default to can0
+  settings.chargerCanIndex = DEAFULT_CAN_INTERFACE_INDEX; //default to can0
+  settings.veCanIndex = DEAFULT_CAN_INTERFACE_INDEX; //default to can0
   settings.curcan = LemCAB300;
   settings.voltsoc = 0; //SOC purely voltage based
   settings.Pretime = 5000; //ms of precharge time
@@ -309,8 +311,9 @@ void setup()
   SPI1.setMISO (MCP2515_SO_2) ;
   SPI1.setSCK (MCP2515_SCK_2) ;
   SPI1.begin () ;
+  delay(500);
   
-  bmscan.begin(500000, 2);
+
 
   //if using enable pins on a transceiver they need to be set on
 
@@ -376,6 +379,10 @@ void setup()
     loadSettings();
   }
 
+  bmscan.begin(500000, DEAFULT_CAN_INTERFACE_INDEX);
+  bmscan.begin(500000, settings.chargerCanIndex);
+  bmscan.begin(500000, settings.veCanIndex);
+  
   Logger::setLoglevel(Logger::Off); //Debug = 0, Info = 1, Warn = 2, Error = 3, Off = 4
 
   lastUpdate = 0;
@@ -1655,7 +1662,7 @@ void VEcan() //communication with Victron system over CAN
   msg.buf[6] = lowByte(uint16_t((settings.DischVsetpoint * settings.Scells) * 10));
   msg.buf[7] = highByte(uint16_t((settings.DischVsetpoint * settings.Scells) * 10));
 
-  bmscan.write(msg, 2);
+  bmscan.write(msg, settings.veCanIndex);
 
   msg.id  = 0x355;
   msg.len = 8;
@@ -1667,7 +1674,7 @@ void VEcan() //communication with Victron system over CAN
   msg.buf[5] = highByte(SOC * 10);
   msg.buf[6] = 0;
   msg.buf[7] = 0;
-  bmscan.write(msg, 2);
+  bmscan.write(msg, settings.veCanIndex);
 
   msg.id  = 0x356;
   msg.len = 8;
@@ -1679,7 +1686,7 @@ void VEcan() //communication with Victron system over CAN
   msg.buf[5] = highByte(int16_t(bms.getAvgTemperature() * 10));
   msg.buf[6] = 0;
   msg.buf[7] = 0;
-  bmscan.write(msg, 2);
+  bmscan.write(msg, settings.veCanIndex);
 
   delay(2);
   msg.id  = 0x35A;
@@ -1692,7 +1699,7 @@ void VEcan() //communication with Victron system over CAN
   msg.buf[5] = warning[1];// High Discharge Current | Low Temperature
   msg.buf[6] = warning[2];//Internal Failure | High Charge current
   msg.buf[7] = warning[3];// Cell Imbalance
-  bmscan.write(msg, 2);
+  bmscan.write(msg, settings.veCanIndex);
 
   msg.id  = 0x35E;
   msg.len = 8;
@@ -1704,7 +1711,7 @@ void VEcan() //communication with Victron system over CAN
   msg.buf[5] = bmsname[5];
   msg.buf[6] = bmsname[6];
   msg.buf[7] = bmsname[7];
-  bmscan.write(msg, 2);
+  bmscan.write(msg, settings.veCanIndex);
 
   delay(2);
   msg.id  = 0x370;
@@ -1717,7 +1724,7 @@ void VEcan() //communication with Victron system over CAN
   msg.buf[5] = bmsmanu[5];
   msg.buf[6] = bmsmanu[6];
   msg.buf[7] = bmsmanu[7];
-  bmscan.write(msg, 2);
+  bmscan.write(msg, settings.veCanIndex);
 
   delay(2);
   msg.id  = 0x373;
@@ -1730,7 +1737,7 @@ void VEcan() //communication with Victron system over CAN
   msg.buf[5] = highByte(uint16_t(bms.getLowTemperature() + 273.15));
   msg.buf[6] = lowByte(uint16_t(bms.getHighTemperature() + 273.15));
   msg.buf[7] = highByte(uint16_t(bms.getHighTemperature() + 273.15));
-  bmscan.write(msg, 2);
+  bmscan.write(msg, settings.veCanIndex);
 
   delay(2);
   msg.id  = 0x379; //Installed capacity
@@ -1763,7 +1770,7 @@ void VEcan() //communication with Victron system over CAN
   msg.buf[5] = 0x00;
   msg.buf[6] = 0x00;
   msg.buf[7] = 0x00;
-  bmscan.write(msg, 2);
+  bmscan.write(msg, settings.veCanIndex);
 
 }
 
@@ -2252,6 +2259,19 @@ void menu()
           if (settings.chargerCanIndex > 3) {
             settings.chargerCanIndex = 0;
           }
+          bmscan.begin(500000, settings.chargerCanIndex);
+          menuload = 1;
+          incomingByte = 'e';
+        }
+        break;
+       case 'v':
+        if (Serial.available() > 0)
+        {
+          settings.veCanIndex++;
+          if (settings.veCanIndex > 3) {
+            settings.veCanIndex = 0;
+          }
+          bmscan.begin(500000, settings.veCanIndex);
           menuload = 1;
           incomingByte = 'e';
         }
@@ -2687,6 +2707,24 @@ void menu()
         }
         SERIALCONSOLE.println();
 
+        SERIALCONSOLE.print("v - Status (VE CAN) Can Interface Index: ");
+        switch (settings.veCanIndex)
+        {
+          case 0:
+            SERIALCONSOLE.print("Can0");
+            break;
+          case 1:
+            SERIALCONSOLE.print("Can1");
+            break;
+          case 2:
+            SERIALCONSOLE.print("SPI");
+            break;
+          case 3:
+            SERIALCONSOLE.print("SPI1");
+            break;
+        }
+        SERIALCONSOLE.println();
+
         SERIALCONSOLE.print("0 - Pack Cold Charge Current: ");
         SERIALCONSOLE.print(settings.chargecurrentcold * 0.1);
         SERIALCONSOLE.println("A");
@@ -3010,7 +3048,7 @@ void menu()
 
 void canread()
 {
-  bmscan.read(inMsg, 2);
+  bmscan.read(inMsg, DEAFULT_CAN_INTERFACE_INDEX);
   // Read data: len = data length, buf = data byte(s)
   if ( settings.cursens == Canbus)
   {
@@ -3391,7 +3429,7 @@ void sendcommand()
   msg.buf[5] = 0x00;
   msg.buf[6] = 0x00;
   msg.buf[7] = 0x00;
-  bmscan.write(msg, 2);
+  bmscan.write(msg, DEAFULT_CAN_INTERFACE_INDEX);
   delay(1);
   msg.id  = controlid;
   msg.len = 8;
@@ -3403,7 +3441,7 @@ void sendcommand()
   msg.buf[5] = 0x00;
   msg.buf[6] = 0x00;
   msg.buf[7] = 0x30;
-  bmscan.write(msg, 2);
+  bmscan.write(msg, DEAFULT_CAN_INTERFACE_INDEX);
 }
 
 void resetwdog()
