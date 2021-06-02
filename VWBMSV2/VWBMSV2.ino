@@ -236,6 +236,7 @@ void loadSettings()
   settings.socvolt[3] = 90; //Voltage and SOC curve for voltage based SOC calc
   settings.invertcur = 0; //Invert current sensor direction
   settings.cursens = 2;
+  settings.chargerCanIndex = 0; //default to can0
   settings.curcan = LemCAB300;
   settings.voltsoc = 0; //SOC purely voltage based
   settings.Pretime = 5000; //ms of precharge time
@@ -2244,6 +2245,17 @@ void menu()
           incomingByte = 'e';
         }
         break;
+       case 'c':
+        if (Serial.available() > 0)
+        {
+          settings.chargerCanIndex++;
+          if (settings.chargerCanIndex > 3) {
+            settings.chargerCanIndex = 0;
+          }
+          menuload = 1;
+          incomingByte = 'e';
+        }
+        break;
       case '0':
         if (Serial.available() > 0)
         {
@@ -2657,6 +2669,24 @@ void menu()
         SERIALCONSOLE.print("9 - Charge Current derate Low: ");
         SERIALCONSOLE.print(settings.ChargeTSetpoint);
         SERIALCONSOLE.println(" C");
+        SERIALCONSOLE.print("c - Charger Can Interface Index: ");
+        switch (settings.chargerCanIndex)
+        {
+          case 0:
+            SERIALCONSOLE.print("Can0");
+            break;
+          case 1:
+            SERIALCONSOLE.print("Can1");
+            break;
+          case 2:
+            SERIALCONSOLE.print("SPI");
+            break;
+          case 3:
+            SERIALCONSOLE.print("SPI1");
+            break;
+        }
+        SERIALCONSOLE.println();
+
         SERIALCONSOLE.print("0 - Pack Cold Charge Current: ");
         SERIALCONSOLE.print(settings.chargecurrentcold * 0.1);
         SERIALCONSOLE.println("A");
@@ -3642,7 +3672,7 @@ void chargercomms()
     msg.buf[6] = 0x00;
     msg.buf[7] = 0x00;
 
-    bmscan.write(msg, 2);
+    bmscan.write(msg, settings.chargerCanIndex);
     msg.flags.extended = 0;
   }
 
@@ -3658,7 +3688,7 @@ void chargercomms()
     msg.buf[5] = lowByte(chargecurrent / ncharger);
     msg.buf[6] = highByte(chargecurrent / ncharger);
 
-    bmscan.write(msg, 2);
+    bmscan.write(msg, settings.chargerCanIndex);
   }
   if (settings.chargertype == BrusaNLG5)
   {
@@ -3691,7 +3721,7 @@ void chargercomms()
     msg.buf[6] = lowByte(chargecurrent / ncharger);
     msg.buf[3] = highByte(uint16_t(((settings.ChargeVsetpoint * settings.Scells ) - chargerendbulk) * 10));
     msg.buf[4] = lowByte(uint16_t(((settings.ChargeVsetpoint * settings.Scells ) - chargerendbulk)  * 10));
-    bmscan.write(msg, 2);
+    bmscan.write(msg, settings.chargerCanIndex);
 
     delay(2);
 
@@ -3712,7 +3742,7 @@ void chargercomms()
     msg.buf[4] = lowByte(uint16_t(((settings.ChargeVsetpoint * settings.Scells ) - chargerend) * 10));
     msg.buf[5] = highByte(chargecurrent / ncharger);
     msg.buf[6] = lowByte(chargecurrent / ncharger);
-    bmscan.write(msg, 2);
+    bmscan.write(msg, settings.chargerCanIndex);
 
   }
   if (settings.chargertype == ChevyVolt)
@@ -3720,7 +3750,7 @@ void chargercomms()
     msg.id  = 0x30E;
     msg.len = 1;
     msg.buf[0] = 0x02; //only HV charging , 0x03 hv and 12V charging
-    bmscan.write(msg, 2);
+    bmscan.write(msg, settings.chargerCanIndex);
 
 
     msg.id  = 0x304;
@@ -3744,7 +3774,7 @@ void chargercomms()
       msg.buf[2] = highByte( 400);
       msg.buf[3] = lowByte( 400);
     }
-    bmscan.write(msg, 2);
+    bmscan.write(msg, settings.chargerCanIndex);
 
   }
 
@@ -3776,7 +3806,7 @@ void chargercomms()
       msg.buf[6] = 0x96;
     }
     msg.buf[7] = 0x01; //HV charging
-    bmscan.write(msg, 2);
+    bmscan.write(msg, settings.chargerCanIndex);
 
   }
 
@@ -3792,7 +3822,7 @@ void chargercomms()
     msg.buf[4] = 0x0;
     msg.buf[5] = 0x0;
     msg.buf[6] = 0x0;
-    bmscan.write(msg, 2);
+    bmscan.write(msg, settings.chargerCanIndex);
 
     
     msg.id  = 0x286;
@@ -3804,7 +3834,7 @@ void chargercomms()
     msg.buf[4] = 0x0;
     msg.buf[5] = 0x0;
     msg.buf[6] = 0x0;
-    bmscan.write(msg, 2);
+    bmscan.write(msg, settings.chargerCanIndex);
   }
 }
 

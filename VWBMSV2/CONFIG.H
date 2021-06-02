@@ -97,4 +97,5 @@ typedef struct {
   float DischHys;
   int16_t chargecurrentcold;
   int curcan;
+  int chargerCanIndex;
 } EEPROMSettings;
