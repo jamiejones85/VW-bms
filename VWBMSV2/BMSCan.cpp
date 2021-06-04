@@ -51,14 +51,15 @@ int BMSCan::read (BMS_CAN_MESSAGE &msg, int interfaceIndex) {
 uint32_t BMSCan::available (int interfaceIndex) {
 
   if (interfaceIndex == 0) {
-    ACAN::can0.available();
+    return ACAN::can0.available();
   } else if (interfaceIndex == 1) {
-    ACAN::can1.available();
+    return ACAN::can1.available();
   } else if (interfaceIndex == 2) {
-    can2->available();
+    return can2->available();
   } else if (interfaceIndex == 3) {
-    can3->available();
+    return can3->available();
   }
+  SERIALCONSOLE.println("BMSCan shoulnt get here");
   return 0;
 }
 void BMSCan::begin(uint32_t baud, int interfaceIndex) {

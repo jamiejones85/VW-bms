@@ -311,7 +311,6 @@ void setup()
   SPI1.setMISO (MCP2515_SO_2) ;
   SPI1.setSCK (MCP2515_SCK_2) ;
   SPI1.begin () ;
-  delay(500);
   
 
 
@@ -428,7 +427,8 @@ float readTeslaSPI() {
 
 void loop()
 {
-  while (bmscan.available(2))
+
+  while (bmscan.available(DEAFULT_CAN_INTERFACE_INDEX))
   {
     canread();
   }
