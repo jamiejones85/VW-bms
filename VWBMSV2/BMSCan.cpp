@@ -50,13 +50,13 @@ int BMSCan::read (BMS_CAN_MESSAGE &msg, int interfaceIndex) {
 
 uint32_t BMSCan::available (int interfaceIndex) {
 
-  if (interfaceIndex == 0) {
+  if (interfaceIndex == 0 && started[interfaceIndex]) {
     return ACAN::can0.available();
-  } else if (interfaceIndex == 1) {
+  } else if (interfaceIndex == 1 && started[interfaceIndex]) {
     return ACAN::can1.available();
-  } else if (interfaceIndex == 2) {
+  } else if (interfaceIndex == 2 && started[interfaceIndex]) {
     return can2->available();
-  } else if (interfaceIndex == 3) {
+  } else if (interfaceIndex == 3 && started[interfaceIndex]) {
     return can3->available();
   }
   return 0;

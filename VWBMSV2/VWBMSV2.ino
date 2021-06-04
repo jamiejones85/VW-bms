@@ -30,7 +30,7 @@
 #include "BMSCan.h"
 
 #define CPU_REBOOT (_reboot_Teensyduino_());
-#define DEAFULT_CAN_INTERFACE_INDEX 1
+#define DEFAULT_CAN_INTERFACE_INDEX 0
 
 BMSModuleManager bms;
 SerialConsole console;
@@ -38,7 +38,7 @@ EEPROMSettings settings;
 
 
 /////Version Identifier/////////
-int firmver = 280409;
+int firmver = 280410;
 
 //Curent filter//
 float filterFrequency = 5.0 ;
@@ -237,8 +237,9 @@ void loadSettings()
   settings.socvolt[3] = 90; //Voltage and SOC curve for voltage based SOC calc
   settings.invertcur = 0; //Invert current sensor direction
   settings.cursens = 2;
-  settings.chargerCanIndex = DEAFULT_CAN_INTERFACE_INDEX; //default to can0
-  settings.veCanIndex = DEAFULT_CAN_INTERFACE_INDEX; //default to can0
+  settings.chargerCanIndex = DEFAULT_CAN_INTERFACE_INDEX; //default to can0
+  settings.veCanIndex = DEFAULT_CAN_INTERFACE_INDEX; //default to can0
+  settings.secondBatteryCanIndex = DEFAULT_CAN_INTERFACE_INDEX; //default to can0, effectivly no second pack
   settings.curcan = LemCAB300;
   settings.voltsoc = 0; //SOC purely voltage based
   settings.Pretime = 5000; //ms of precharge time
@@ -378,10 +379,11 @@ void setup()
     loadSettings();
   }
 
-  bmscan.begin(500000, DEAFULT_CAN_INTERFACE_INDEX);
+  bmscan.begin(500000, DEFAULT_CAN_INTERFACE_INDEX);
   bmscan.begin(500000, settings.chargerCanIndex);
   bmscan.begin(500000, settings.veCanIndex);
-  
+  bmscan.begin(500000, settings.secondBatteryCanIndex);
+
   Logger::setLoglevel(Logger::Off); //Debug = 0, Info = 1, Warn = 2, Error = 3, Off = 4
 
   lastUpdate = 0;
@@ -428,11 +430,31 @@ float readTeslaSPI() {
 void loop()
 {
 
-  while (bmscan.available(DEAFULT_CAN_INTERFACE_INDEX))
+  while (bmscan.available(DEFAULT_CAN_INTERFACE_INDEX))
   {
-    canread();
+    canread(DEFAULT_CAN_INTERFACE_INDEX, 0);
   }
 
+  //read secondBatteryCan if different from deafult. (If same as default, no secondard pack installed)
+  if (settings.secondBatteryCanIndex != DEFAULT_CAN_INTERFACE_INDEX) {
+    canread(settings.secondBatteryCanIndex, 32);
+  }
+  
+  //read chargerCan if different to DEFAULT and different to secondary
+  if (settings.chargerCanIndex != DEFAULT_CAN_INTERFACE_INDEX 
+    && settings.chargerCanIndex != settings.secondBatteryCanIndex) {
+    canread(settings.chargerCanIndex, 0);
+  }
+
+  //read veCan if different to DEFAULT and charger, and secondary
+  if (settings.veCanIndex != DEFAULT_CAN_INTERFACE_INDEX 
+    && settings.veCanIndex != settings.chargerCanIndex 
+    && settings.veCanIndex != settings.secondBatteryCanIndex) {
+    canread(settings.veCanIndex, 0);
+  }
+
+
+  
   if (SERIALCONSOLE.available() > 0)
   {
     menu();
@@ -2478,6 +2500,18 @@ void menu()
           incomingByte = 'b';
         }
         break;
+     case 'l': //secondary battery pack interface
+        if (Serial.available() > 0)
+        {
+          settings.secondBatteryCanIndex++;
+          if (settings.secondBatteryCanIndex > 3) {
+            settings.secondBatteryCanIndex = 0;
+          }
+          bmscan.begin(500000, settings.secondBatteryCanIndex);
+          menuload = 1;
+          incomingByte = 'b';
+        }
+        break;
 
       case '9': //Discharge Voltage Setpoint
         if (Serial.available() > 0)
@@ -3016,6 +3050,23 @@ void menu()
         SERIALCONSOLE.print(settings.DischHys * 1000, 0);
         SERIALCONSOLE.print("mV");
         SERIALCONSOLE.println();
+        SERIALCONSOLE.print("l - Secondary Battery Pack Can Interface: ");
+        switch (settings.secondBatteryCanIndex)
+        {
+          case 0:
+            SERIALCONSOLE.print("No seconary Battery Pack");
+            break;
+          case 1:
+            SERIALCONSOLE.print("Can1");
+            break;
+          case 2:
+            SERIALCONSOLE.print("SPI");
+            break;
+          case 3:
+            SERIALCONSOLE.print("SPI1");
+            break;
+        }
+        SERIALCONSOLE.println();
         menuload = 3;
         break;
 
@@ -3046,9 +3097,10 @@ void menu()
   }
 }
 
-void canread()
+//ID offset is only applied to battery module frames
+void canread(int canInterfaceOffset, int idOffset)
 {
-  bmscan.read(inMsg, DEAFULT_CAN_INTERFACE_INDEX);
+  bmscan.read(inMsg, canInterfaceOffset);
   // Read data: len = data length, buf = data byte(s)
   if ( settings.cursens == Canbus)
   {
@@ -3113,6 +3165,7 @@ void canread()
 
   if (inMsg.id < 0x300)//do VW BMS magic if ids are ones identified to be modules
   {
+    inMsg.id = inMsg.id + idOffset;
     if (candebug == 1)
     {
       bms.decodecan(inMsg, 1); //do VW BMS if ids are ones identified to be modules
@@ -3125,6 +3178,7 @@ void canread()
 
   if ((inMsg.id & 0x1FFFFFFF) < 0x1A5554F0 && (inMsg.id & 0x1FFFFFFF) > 0x1A555400)   // Determine if ID is Temperature CAN-ID
   {
+    inMsg.id = inMsg.id = idOffset;
     if (candebug == 1)
     {
       bms.decodetemp(inMsg, 1);
@@ -3429,7 +3483,10 @@ void sendcommand()
   msg.buf[5] = 0x00;
   msg.buf[6] = 0x00;
   msg.buf[7] = 0x00;
-  bmscan.write(msg, DEAFULT_CAN_INTERFACE_INDEX);
+  bmscan.write(msg, DEFAULT_CAN_INTERFACE_INDEX);
+  if (settings.secondBatteryCanIndex != DEFAULT_CAN_INTERFACE_INDEX) {
+      bmscan.write(msg, settings.secondBatteryCanIndex);
+  }
   delay(1);
   msg.id  = controlid;
   msg.len = 8;
@@ -3441,7 +3498,10 @@ void sendcommand()
   msg.buf[5] = 0x00;
   msg.buf[6] = 0x00;
   msg.buf[7] = 0x30;
-  bmscan.write(msg, DEAFULT_CAN_INTERFACE_INDEX);
+  bmscan.write(msg, DEFAULT_CAN_INTERFACE_INDEX);
+  if (settings.secondBatteryCanIndex != DEFAULT_CAN_INTERFACE_INDEX) {
+      bmscan.write(msg, settings.secondBatteryCanIndex);
+  }
 }
 
 void resetwdog()

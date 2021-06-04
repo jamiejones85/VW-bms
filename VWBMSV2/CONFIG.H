@@ -99,4 +99,5 @@ typedef struct {
   int curcan;
   int chargerCanIndex;
   int veCanIndex;
+  int secondBatteryCanIndex;
 } EEPROMSettings;
