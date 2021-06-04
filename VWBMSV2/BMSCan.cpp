@@ -59,7 +59,6 @@ uint32_t BMSCan::available (int interfaceIndex) {
   } else if (interfaceIndex == 3) {
     return can3->available();
   }
-  SERIALCONSOLE.println("BMSCan shoulnt get here");
   return 0;
 }
 void BMSCan::begin(uint32_t baud, int interfaceIndex) {
