@@ -17,7 +17,35 @@
   CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
   TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
   SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+/////////////////////////////////////////////////////////////////////////////////////////////////
+
+░██████╗██╗███╗░░░███╗██████╗░██████╗░███╗░░░███╗░██████╗  
+██╔════╝██║████╗░████║██╔══██╗██╔══██╗████╗░████║██╔════╝  
+╚█████╗░██║██╔████╔██║██████╔╝██████╦╝██╔████╔██║╚█████╗░  
+░╚═══██╗██║██║╚██╔╝██║██╔═══╝░██╔══██╗██║╚██╔╝██║░╚═══██╗  
+██████╔╝██║██║░╚═╝░██║██║░░░░░██████╦╝██║░╚═╝░██║██████╔╝  
+╚═════╝░╚═╝╚═╝░░░░░╚═╝╚═╝░░░░░╚═════╝░╚═╝░░░░░╚═╝╚═════╝░  
+
+░██████╗██████╗░░█████╗░░█████╗░███████╗  ██████╗░░█████╗░██╗░░░░░██╗░░░░░░██████╗
+██╔════╝██╔══██╗██╔══██╗██╔══██╗██╔════╝  ██╔══██╗██╔══██╗██║░░░░░██║░░░░░██╔════╝
+╚█████╗░██████╔╝███████║██║░░╚═╝█████╗░░  ██████╦╝███████║██║░░░░░██║░░░░░╚█████╗░
+░╚═══██╗██╔═══╝░██╔══██║██║░░██╗██╔══╝░░  ██╔══██╗██╔══██║██║░░░░░██║░░░░░░╚═══██╗
+██████╔╝██║░░░░░██║░░██║╚█████╔╝███████╗  ██████╦╝██║░░██║███████╗███████╗██████╔╝
+╚═════╝░╚═╝░░░░░╚═╝░░╚═╝░╚════╝░╚══════╝  ╚═════╝░╚═╝░░╚═╝╚══════╝╚══════╝╚═════╝░
+
+███████╗██████╗░██╗████████╗██╗░█████╗░███╗░░██╗
+██╔════╝██╔══██╗██║╚══██╔══╝██║██╔══██╗████╗░██║
+█████╗░░██║░░██║██║░░░██║░░░██║██║░░██║██╔██╗██║
+██╔══╝░░██║░░██║██║░░░██║░░░██║██║░░██║██║╚████║
+███████╗██████╔╝██║░░░██║░░░██║╚█████╔╝██║░╚███║
+╚══════╝╚═════╝░╚═╝░░░╚═╝░░░╚═╝░╚════╝░╚═╝░░╚══╝
+
+
+This version of SimpBMS has been modified as the Space Balls edition utilising the Teensey 3.6, alowingfor upto 4 Canbus' 
+  2 Native(Flexcans) + 2 MCP2515/SPI Cans
 */
+
 #include "BMSModuleManager.h"
 #include <Arduino.h>
 #include "config.h"
@@ -3178,7 +3206,8 @@ void canread(int canInterfaceOffset, int idOffset)
 
   if ((inMsg.id & 0x1FFFFFFF) < 0x1A5554F0 && (inMsg.id & 0x1FFFFFFF) > 0x1A555400)   // Determine if ID is Temperature CAN-ID
   {
-    inMsg.id = inMsg.id = idOffset;
+
+    inMsg.id = inMsg.id + idOffset/4; // the temps only require offsetting id by 8 (1/4 of 32) i.e. 1 can id per slave. 
     if (candebug == 1)
     {
       bms.decodetemp(inMsg, 1);
@@ -3188,6 +3217,7 @@ void canread(int canInterfaceOffset, int idOffset)
     {
       bms.decodetemp(inMsg, 0);
     }
+
   }
 
   if (candebug == 1)
